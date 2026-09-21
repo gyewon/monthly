@@ -227,17 +227,8 @@ function setupEventListeners() {
   });
 
   // Action Buttons
-  document.getElementById('btn-sync-supabase').addEventListener('click', async () => {
-    showToast('Supabase 동기화를 진행합니다...');
-    await syncFromSupabase();
-  });
   document.getElementById('btn-copy-summary').addEventListener('click', copySummaryToClipboard);
   document.getElementById('btn-export-json').addEventListener('click', exportBackupJSON);
-  
-  const importTrigger = document.getElementById('btn-import-trigger');
-  const importInput = document.getElementById('import-json-input');
-  importTrigger.addEventListener('click', () => importInput.click());
-  importInput.addEventListener('change', importBackupJSON);
 
   // Income Addition Modal Trigger
   document.getElementById('btn-add-income-modal').addEventListener('click', () => openAddIncomeModal());
@@ -761,6 +752,50 @@ function closeModal() {
   document.getElementById('item-modal').classList.remove('active');
 }
 
+// Helper to attach modal formatters
+function attachIncomeModalFormatters() {
+  const amountInput = document.getElementById('modal-inc-amount');
+  const dayInput = document.getElementById('modal-inc-day');
+  const catSelect = document.getElementById('modal-inc-cat-select');
+  const titleInput = document.getElementById('modal-inc-title');
+
+  // 1. Real-time Thousands Comma Formatting
+  if (amountInput) {
+    amountInput.addEventListener('input', (e) => {
+      const raw = e.target.value.replace(/[^\d]/g, '');
+      e.target.value = raw ? Number(raw).toLocaleString('ko-KR') : '';
+    });
+  }
+
+  // 2. Automatic '일' Appending on Day Input
+  if (dayInput) {
+    const autoDay = (e) => {
+      let val = e.target.value.trim();
+      if (!val) return;
+      if (/^\d+$/.test(val)) {
+        e.target.value = val + '일';
+      } else if (/^\d+\/\d+$/.test(val)) {
+        const parts = val.split('/');
+        e.target.value = `${parts[0]}일/${parts[1]}일`;
+      }
+    };
+    dayInput.addEventListener('blur', autoDay);
+    dayInput.addEventListener('change', autoDay);
+  }
+
+  // 3. Category Dropdown updates Title Input
+  if (catSelect && titleInput) {
+    catSelect.addEventListener('change', (e) => {
+      if (e.target.value && e.target.value !== 'CUSTOM') {
+        titleInput.value = e.target.value;
+      } else if (e.target.value === 'CUSTOM') {
+        titleInput.value = '';
+        titleInput.focus();
+      }
+    });
+  }
+}
+
 function openAddIncomeModal() {
   const body = document.getElementById('modal-body');
   document.getElementById('modal-title').innerText = '수입 항목 추가';
@@ -771,19 +806,29 @@ function openAddIncomeModal() {
       <select id="modal-inc-person" class="form-select">
         <option value="gyewon">계원</option>
         <option value="dongwook">동욱</option>
+        <option value="common">공통 / 가구</option>
       </select>
     </div>
     <div class="form-group">
-      <label>수입 항목명 (예: 기본급, 보너스, 부수입)</label>
-      <input type="text" id="modal-inc-title" class="form-control" placeholder="항목명 입력">
+      <label>수입 항목 카테고리 선택</label>
+      <select id="modal-inc-cat-select" class="form-select mb-2">
+        <option value="">-- 카테고리 선택 --</option>
+        <option value="기본급 (급여)">기본급 (급여)</option>
+        <option value="보너스 / 상여금">보너스 / 상여금</option>
+        <option value="인센티브">인센티브</option>
+        <option value="부수입 / 알바">부수입 / 알바</option>
+        <option value="투자수익 / 배당">투자수익 / 배당</option>
+        <option value="CUSTOM">직접 입력...</option>
+      </select>
+      <input type="text" id="modal-inc-title" class="form-control" placeholder="수입 항목명 (예: 기본급(급여), 성과급)">
     </div>
     <div class="form-group">
-      <label>금액 (원)</label>
-      <input type="number" id="modal-inc-amount" class="form-control" placeholder="0">
+      <label>수입 / 월급 금액 (원)</label>
+      <input type="text" id="modal-inc-amount" class="form-control" placeholder="0 (숫자 입력 시 , 자동 적용)">
     </div>
     <div class="form-group">
       <label>입금일자 / 월급날 (예: 25일, 27일, 10일)</label>
-      <input type="text" id="modal-inc-day" class="form-control" placeholder="예: 25일">
+      <input type="text" id="modal-inc-day" class="form-control" placeholder="숫자만 써도 '일' 자동 추가 (예: 25, 28)">
     </div>
     <div class="form-group">
       <label>비고</label>
@@ -792,12 +837,15 @@ function openAddIncomeModal() {
   `;
 
   document.getElementById('item-modal').classList.add('active');
+  attachIncomeModalFormatters();
 
   document.getElementById('modal-save-btn').onclick = () => {
     const person = document.getElementById('modal-inc-person').value;
     const title = document.getElementById('modal-inc-title').value.trim();
-    const amount = Number(document.getElementById('modal-inc-amount').value) || 0;
-    const day = formatDayInput(document.getElementById('modal-inc-day').value.trim() || '25일');
+    const rawAmt = document.getElementById('modal-inc-amount').value.replace(/,/g, '');
+    const amount = Number(rawAmt) || 0;
+    const dayInputVal = document.getElementById('modal-inc-day').value.trim();
+    const day = formatDayInput(dayInputVal || '25일');
     const note = document.getElementById('modal-inc-note').value.trim();
 
     if (!title) { alert('수입 항목명을 입력하세요.'); return; }
@@ -822,8 +870,10 @@ function openEditIncomeModal(incId) {
   if (!inc) return;
 
   const body = document.getElementById('modal-body');
-  const personName = inc.person === 'gyewon' ? '계원' : '동욱';
+  const personName = inc.person === 'gyewon' ? '계원' : (inc.person === 'dongwook' ? '동욱' : '공통');
   document.getElementById('modal-title').innerText = `${personName} 수입/월급 수정`;
+
+  const initialAmountFormatted = inc.amount ? Number(inc.amount).toLocaleString('ko-KR') : '';
 
   body.innerHTML = `
     <div class="form-group">
@@ -831,38 +881,51 @@ function openEditIncomeModal(incId) {
       <select id="modal-inc-person" class="form-select">
         <option value="gyewon" ${inc.person === 'gyewon' ? 'selected' : ''}>계원</option>
         <option value="dongwook" ${inc.person === 'dongwook' ? 'selected' : ''}>동욱</option>
+        <option value="common" ${inc.person === 'common' ? 'selected' : ''}>공통 / 가구</option>
       </select>
     </div>
     <div class="form-group">
-      <label>수입 항목명 (예: 기본급, 보너스, 부수입)</label>
-      <input type="text" id="modal-inc-title" class="form-control" value="${inc.title}">
+      <label>수입 항목 카테고리 선택</label>
+      <select id="modal-inc-cat-select" class="form-select mb-2">
+        <option value="">-- 카테고리 선택 --</option>
+        <option value="기본급 (급여)" ${inc.title.includes('기본급') || inc.title.includes('급여') ? 'selected' : ''}>기본급 (급여)</option>
+        <option value="보너스 / 상여금" ${inc.title.includes('보너스') || inc.title.includes('상여') ? 'selected' : ''}>보너스 / 상여금</option>
+        <option value="인센티브" ${inc.title.includes('인센티브') ? 'selected' : ''}>인센티브</option>
+        <option value="부수입 / 알바" ${inc.title.includes('부수입') || inc.title.includes('알바') ? 'selected' : ''}>부수입 / 알바</option>
+        <option value="투자수익 / 배당" ${inc.title.includes('투자') || inc.title.includes('배당') ? 'selected' : ''}>투자수익 / 배당</option>
+        <option value="CUSTOM">직접 입력...</option>
+      </select>
+      <input type="text" id="modal-inc-title" class="form-control" value="${inc.title}" placeholder="수입 항목명 입력">
     </div>
     <div class="form-group">
-      <label>수입 / 월급 금액 (원) - 월급 인상/변동 시 수정</label>
-      <input type="number" id="modal-inc-amount" class="form-control" value="${inc.amount}">
+      <label>수입 / 월급 금액 (원) - 숫자 입력 시 , 자동 생성</label>
+      <input type="text" id="modal-inc-amount" class="form-control" value="${initialAmountFormatted}" placeholder="0">
     </div>
     <div class="form-group">
-      <label>입금일자 / 월급날 (예: 25일, 27일, 10일)</label>
-      <input type="text" id="modal-inc-day" class="form-control" value="${inc.day || '25일'}">
+      <label>입금일자 / 월급날 (숫자 입력 시 '일' 자동 추가)</label>
+      <input type="text" id="modal-inc-day" class="form-control" value="${inc.day || '25일'}" placeholder="예: 25, 28">
     </div>
     <div class="form-group">
       <label>비고</label>
-      <input type="text" id="modal-inc-note" class="form-control" value="${inc.note || ''}">
+      <input type="text" id="modal-inc-note" class="form-control" value="${inc.note || ''}" placeholder="메모">
     </div>
   `;
 
   document.getElementById('item-modal').classList.add('active');
+  attachIncomeModalFormatters();
 
   document.getElementById('modal-save-btn').onclick = () => {
     inc.person = document.getElementById('modal-inc-person').value;
     inc.title = document.getElementById('modal-inc-title').value.trim();
-    inc.amount = Number(document.getElementById('modal-inc-amount').value) || 0;
-    inc.day = formatDayInput(document.getElementById('modal-inc-day').value.trim() || '25일');
+    const rawAmt = document.getElementById('modal-inc-amount').value.replace(/,/g, '');
+    inc.amount = Number(rawAmt) || 0;
+    const dayInputVal = document.getElementById('modal-inc-day').value.trim();
+    inc.day = formatDayInput(dayInputVal || '25일');
     inc.note = document.getElementById('modal-inc-note').value.trim();
 
     closeModal();
     saveState();
-    showToast('수입/월급 정보가 수정되었습니다.');
+    showToast('수입/월급 정보가 성공적으로 수정되었습니다.');
   };
 }
 
