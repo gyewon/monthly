@@ -7,8 +7,8 @@
 const DEFAULT_EXCEL_DATA = {
   currentMonth: '2026-03',
   incomes: [
-    { id: 'inc_g1', person: 'gyewon', title: '기본급 (급여)', amount: 4700000, note: '계원 월급' },
-    { id: 'inc_d1', person: 'dongwook', title: '기본급 (급여)', amount: 3750000, note: '동욱 월급' }
+    { id: 'inc_g1', person: 'gyewon', title: '기본급 (급여)', amount: 4700000, day: '27일', note: '계원 월급날 (27일)' },
+    { id: 'inc_d1', person: 'dongwook', title: '기본급 (급여)', amount: 3750000, day: '16일', note: '동욱 월급날 (16일)' }
   ],
   allocations: {
     gyewon: [
@@ -277,9 +277,10 @@ function renderIncomeTables() {
     tr.innerHTML = `
       <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'title')">${inc.title}</div></td>
       <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
+      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')"><i class="fa-regular fa-calendar-check"></i> ${inc.day || '25일'}</div></td>
       <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'note')">${inc.note || '-'}</div></td>
       <td style="white-space:nowrap; text-align:right;">
-        <button class="btn btn-outline-primary btn-sm" title="수입/월급 수정" onclick="openEditIncomeModal('${inc.id}')"><i class="fa-solid fa-pen-to-square"></i> 수정</button>
+        <button class="btn btn-outline-primary btn-sm" title="수입/월급 수정" onclick="openEditIncomeModal('${inc.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
         <button class="btn btn-outline-danger btn-sm" title="삭제" onclick="deleteItem('incomes', '${inc.id}')"><i class="fa-solid fa-trash"></i></button>
       </td>
     `;
@@ -409,16 +410,69 @@ function renderFixedExpensesTable() {
   document.getElementById('fixed-stat-completion').innerText = `${paidCount} / ${totalCount} (${pct}%)`;
 }
 
-// Render Timeline / Schedule
+// Render Master Timeline / Deposit & Expense Schedule
 function renderTimeline() {
   const container = document.getElementById('schedule-timeline');
   container.innerHTML = '';
 
   const groups = {};
-  appState.fixedExpenses.forEach(item => {
-    const dayKey = item.day || '수기/미지정';
+
+  // 1. Incomes (입금/월급)
+  (appState.incomes || []).forEach(inc => {
+    let rawDay = inc.day || '미지정';
+    let dayKey = rawDay.includes('일') ? rawDay : (rawDay + '일');
     if (!groups[dayKey]) groups[dayKey] = [];
-    groups[dayKey].push(item);
+    groups[dayKey].push({
+      type: 'INCOME',
+      name: `${inc.person === 'gyewon' ? '계원' : '동욱'} ${inc.title}`,
+      method: '입금',
+      amount: Number(inc.amount) || 0
+    });
+  });
+
+  // 2. Allocations (Gyewon)
+  (appState.allocations.gyewon || []).forEach(item => {
+    let dayKey = '수기/기타';
+    if (item.schedule && item.schedule.includes('일')) {
+      const match = item.schedule.match(/(\d+일)/);
+      if (match) dayKey = match[1];
+    }
+    if (!groups[dayKey]) groups[dayKey] = [];
+    groups[dayKey].push({
+      type: 'ALLOCATION',
+      name: `계원 ${item.name}`,
+      method: item.bank || '자동이체',
+      amount: Number(item.amount) || 0
+    });
+  });
+
+  // 3. Allocations (Dongwook)
+  (appState.allocations.dongwook || []).forEach(item => {
+    let dayKey = '수기/기타';
+    if (item.schedule && item.schedule.includes('일')) {
+      const match = item.schedule.match(/(\d+일)/);
+      if (match) dayKey = match[1];
+    }
+    if (!groups[dayKey]) groups[dayKey] = [];
+    groups[dayKey].push({
+      type: 'ALLOCATION',
+      name: `동욱 ${item.name}`,
+      method: item.bank || '자동이체',
+      amount: Number(item.amount) || 0
+    });
+  });
+
+  // 4. Fixed Expenses (고정지출 이체)
+  (appState.fixedExpenses || []).forEach(item => {
+    let rawDay = item.day || '수기/기타';
+    let dayKey = (rawDay.includes('일') || rawDay === '수기' || rawDay.includes('수기')) ? rawDay : (rawDay ? rawDay + '일' : '수기/기타');
+    if (!groups[dayKey]) groups[dayKey] = [];
+    groups[dayKey].push({
+      type: 'FIXED',
+      name: item.name,
+      method: item.method || '카드',
+      amount: Number(item.actualMarch || item.amount) || 0
+    });
   });
 
   // Sort keys
@@ -430,22 +484,33 @@ function renderTimeline() {
 
   sortedKeys.forEach(day => {
     const items = groups[day];
-    const totalDayAmount = items.reduce((acc, c) => acc + (Number(c.actualMarch || c.amount) || 0), 0);
+    const totalIncomeDay = items.filter(i => i.type === 'INCOME').reduce((acc, c) => acc + c.amount, 0);
+    const totalOutDay = items.filter(i => i.type !== 'INCOME').reduce((acc, c) => acc + c.amount, 0);
 
     const card = document.createElement('div');
     card.className = 'timeline-card';
     card.innerHTML = `
       <div class="timeline-card-header">
-        <span class="timeline-date"><i class="fa-regular fa-clock"></i> ${day} 이체</span>
-        <span class="timeline-count">${items.length}건 / ${formatKRW(totalDayAmount)}</span>
+        <span class="timeline-date"><i class="fa-regular fa-calendar-check"></i> ${day} 일정</span>
+        <span class="timeline-count">
+          ${totalIncomeDay > 0 ? `<span class="badge badge-gyewon">+${formatKRW(totalIncomeDay)}</span> ` : ''}
+          ${totalOutDay > 0 ? `<span class="badge badge-info">-${formatKRW(totalOutDay)}</span>` : ''}
+        </span>
       </div>
       <ul class="timeline-item-list">
-        ${items.map(i => `
-          <li>
-            <span>${i.name} (${i.method})</span>
-            <strong>${formatKRW(i.actualMarch || i.amount)}</strong>
-          </li>
-        `).join('')}
+        ${items.map(i => {
+          let badgeClass = 'badge-dongwook';
+          let badgeText = '지출';
+          if (i.type === 'INCOME') { badgeClass = 'badge-gyewon'; badgeText = '입금'; }
+          else if (i.type === 'ALLOCATION') { badgeClass = 'badge-info'; badgeText = '배분'; }
+
+          return `
+            <li>
+              <span><span class="badge ${badgeClass}">${badgeText}</span> ${i.name} (${i.method})</span>
+              <strong class="${i.type === 'INCOME' ? 'text-success' : ''}">${formatKRW(i.amount)}</strong>
+            </li>
+          `;
+        }).join('')}
       </ul>
     `;
     container.appendChild(card);
@@ -605,6 +670,10 @@ function openAddIncomeModal() {
       <input type="number" id="modal-inc-amount" class="form-control" placeholder="0">
     </div>
     <div class="form-group">
+      <label>입금일자 / 월급날 (예: 25일, 27일, 10일)</label>
+      <input type="text" id="modal-inc-day" class="form-control" placeholder="예: 25일">
+    </div>
+    <div class="form-group">
       <label>비고</label>
       <input type="text" id="modal-inc-note" class="form-control" placeholder="메모">
     </div>
@@ -616,6 +685,7 @@ function openAddIncomeModal() {
     const person = document.getElementById('modal-inc-person').value;
     const title = document.getElementById('modal-inc-title').value.trim();
     const amount = Number(document.getElementById('modal-inc-amount').value) || 0;
+    const day = document.getElementById('modal-inc-day').value.trim() || '25일';
     const note = document.getElementById('modal-inc-note').value.trim();
 
     if (!title) { alert('수입 항목명을 입력하세요.'); return; }
@@ -625,6 +695,7 @@ function openAddIncomeModal() {
       person,
       title,
       amount,
+      day,
       note
     });
 
@@ -659,6 +730,10 @@ function openEditIncomeModal(incId) {
       <input type="number" id="modal-inc-amount" class="form-control" value="${inc.amount}">
     </div>
     <div class="form-group">
+      <label>입금일자 / 월급날 (예: 25일, 27일, 10일)</label>
+      <input type="text" id="modal-inc-day" class="form-control" value="${inc.day || '25일'}">
+    </div>
+    <div class="form-group">
       <label>비고</label>
       <input type="text" id="modal-inc-note" class="form-control" value="${inc.note || ''}">
     </div>
@@ -670,11 +745,12 @@ function openEditIncomeModal(incId) {
     inc.person = document.getElementById('modal-inc-person').value;
     inc.title = document.getElementById('modal-inc-title').value.trim();
     inc.amount = Number(document.getElementById('modal-inc-amount').value) || 0;
+    inc.day = document.getElementById('modal-inc-day').value.trim() || '25일';
     inc.note = document.getElementById('modal-inc-note').value.trim();
 
     closeModal();
     saveState();
-    showToast('수입/월급 금액이 수정되었습니다.');
+    showToast('수입/월급 정보가 수정되었습니다.');
   };
 }
 
