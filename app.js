@@ -6,9 +6,13 @@
 // Initial Excel Default Data
 const DEFAULT_EXCEL_DATA = {
   currentMonth: '2026-03',
+  categories: {
+    recipients: ['계원', '동욱', '공통 / 가구'],
+    incomeItems: ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입']
+  },
   incomes: [
-    { id: 'inc_g1', person: 'gyewon', title: '기본급 (급여)', amount: 4700000, day: '27일', note: '계원 월급날 (27일)' },
-    { id: 'inc_d1', person: 'dongwook', title: '기본급 (급여)', amount: 3750000, day: '16일', note: '동욱 월급날 (16일)' }
+    { id: 'inc_g1', person: '계원', title: '기본급 (급여)', amount: 4700000, day: '27일', note: '계원 월급날 (27일)' },
+    { id: 'inc_d1', person: '동욱', title: '기본급 (급여)', amount: 3750000, day: '16일', note: '동욱 월급날 (16일)' }
   ],
   allocations: {
     gyewon: [
@@ -55,6 +59,153 @@ const DEFAULT_EXCEL_DATA = {
     { month: '2026-03', totalIncome: 8450000, totalExpenses: 4088506, fixedExpenses: 1698448, remaining: 4361494, savings: 2850000 }
   ]
 };
+
+let currentIncomeRecipientFilter = 'ALL';
+
+// Calculation Helper
+function calculateTotals() {
+  // Incomes
+  let incomeGyewon = 0;
+  let incomeDongwook = 0;
+  let incomeCommon = 0;
+
+  (appState.incomes || []).forEach(inc => {
+    const amt = Number(inc.amount) || 0;
+    const p = (inc.person || '').toLowerCase();
+    if (p === 'gyewon' || p === '계원') incomeGyewon += amt;
+    else if (p === 'dongwook' || p === '동욱') incomeDongwook += amt;
+    else incomeCommon += amt;
+  });
+
+  const totalIncome = incomeGyewon + incomeDongwook + incomeCommon;
+
+  // Allocations
+  let allocGyewonSum = appState.allocations.gyewon.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  let allocDongwookSum = appState.allocations.dongwook.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const totalAllocations = allocGyewonSum + allocDongwookSum;
+
+  const remainGyewon = incomeGyewon - allocGyewonSum;
+  const remainDongwook = incomeDongwook - allocDongwookSum;
+
+  // Fixed Expenses
+  const fixedBaseTotal = appState.fixedExpenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const fixedActualTotal = appState.fixedExpenses.reduce((acc, curr) => acc + (Number(curr.actualMarch) || 0), 0);
+
+  // Total Expenses
+  const totalExpenses = totalAllocations;
+
+  // Savings & Investments (Categories: 저축/적금, 투자/연금)
+  let totalSavings = 0;
+  [...appState.allocations.gyewon, ...appState.allocations.dongwook].forEach(item => {
+    if (item.category === '저축/적금' || item.category === '투자/연금') {
+      totalSavings += Number(item.amount) || 0;
+    }
+  });
+
+  const remainingBalance = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? ((totalSavings / totalIncome) * 100).toFixed(1) : 0;
+
+  return {
+    incomeGyewon,
+    incomeDongwook,
+    incomeCommon,
+    totalIncome,
+    allocGyewonSum,
+    allocDongwookSum,
+    remainGyewon,
+    remainDongwook,
+    totalAllocations,
+    fixedExpenseTotal: fixedBaseTotal,
+    fixedExpenseActualTotal: fixedActualTotal,
+    totalExpenses,
+    totalSavings,
+    remainingBalance,
+    savingsRate
+  };
+}
+
+// Render Unified Incomes Table
+function renderIncomeTables() {
+  const tbody = document.querySelector('#table-income-unified tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const calcs = calculateTotals();
+
+  const gSumElem = document.getElementById('gyewon-income-sum');
+  const dSumElem = document.getElementById('dongwook-income-sum');
+  const cSumElem = document.getElementById('common-income-sum');
+  const uTotalElem = document.getElementById('unified-income-total');
+
+  if (gSumElem) gSumElem.innerText = formatKRW(calcs.incomeGyewon);
+  if (dSumElem) dSumElem.innerText = formatKRW(calcs.incomeDongwook);
+  if (cSumElem) cSumElem.innerText = formatKRW(calcs.incomeCommon);
+  if (uTotalElem) uTotalElem.innerText = formatKRW(calcs.totalIncome);
+
+  // Render Recipient Filter Pills
+  renderIncomeFilterPills();
+
+  // Filter items
+  const filtered = (appState.incomes || []).filter(inc => {
+    if (currentIncomeRecipientFilter === 'ALL') return true;
+    const p = (inc.person || '').toLowerCase();
+    if (currentIncomeRecipientFilter === 'gyewon' || currentIncomeRecipientFilter === '계원') {
+      return p === 'gyewon' || p === '계원';
+    }
+    if (currentIncomeRecipientFilter === 'dongwook' || currentIncomeRecipientFilter === '동욱') {
+      return p === 'dongwook' || p === '동욱';
+    }
+    return inc.person === currentIncomeRecipientFilter;
+  });
+
+  filtered.forEach(inc => {
+    let badgeClass = 'badge-info';
+    let personLabel = inc.person || '기타';
+    if (inc.person === 'gyewon' || inc.person === '계원') { badgeClass = 'badge-gyewon'; personLabel = '계원'; }
+    else if (inc.person === 'dongwook' || inc.person === '동욱') { badgeClass = 'badge-dongwook'; personLabel = '동욱'; }
+    else if (inc.person === 'common' || inc.person === '공통 / 가구') { badgeClass = 'badge-info'; personLabel = '공통/가구'; }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="badge ${badgeClass}">${personLabel}</span></td>
+      <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'title')">${inc.title}</div></td>
+      <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급/금액 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
+      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')"><i class="fa-regular fa-calendar-check"></i> ${inc.day || '25일'}</div></td>
+      <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'note')">${inc.note || '-'}</div></td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button class="btn btn-outline-primary btn-sm" title="수입/월급 수정" onclick="openEditIncomeModal('${inc.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
+        <button class="btn btn-outline-danger btn-sm" title="삭제" onclick="deleteItem('incomes', '${inc.id}')"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderIncomeFilterPills() {
+  const container = document.getElementById('income-recipient-pills');
+  if (!container) return;
+  container.innerHTML = '';
+
+  // Get recipient categories
+  const defaultRecipients = ['계원', '동욱', '공통 / 가구'];
+  const userRecipients = (appState.categories && appState.categories.recipients) ? appState.categories.recipients : defaultRecipients;
+  const allRecipients = Array.from(new Set([...defaultRecipients, ...userRecipients]));
+
+  const allBtn = document.createElement('button');
+  allBtn.className = `btn btn-sm ${currentIncomeRecipientFilter === 'ALL' ? 'btn-primary' : 'btn-glass'}`;
+  allBtn.innerText = '전체 보기';
+  allBtn.onclick = () => { currentIncomeRecipientFilter = 'ALL'; renderIncomeTables(); };
+  container.appendChild(allBtn);
+
+  allRecipients.forEach(r => {
+    const btn = document.createElement('button');
+    const isSelected = currentIncomeRecipientFilter === r;
+    btn.className = `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-glass'}`;
+    btn.innerText = r;
+    btn.onclick = () => { currentIncomeRecipientFilter = r; renderIncomeTables(); };
+    container.appendChild(btn);
+  });
+}
 
 // Supabase Integration Credentials
 const SUPABASE_URL = 'https://bdnqlcrpytkwuaonhgmm.supabase.co';
@@ -230,7 +381,11 @@ function setupEventListeners() {
   document.getElementById('btn-copy-summary').addEventListener('click', copySummaryToClipboard);
   document.getElementById('btn-export-json').addEventListener('click', exportBackupJSON);
 
-  // Income Addition Modal Trigger
+  // Category Management & Income Addition Modal Triggers
+  const btnCatManage = document.getElementById('btn-manage-categories');
+  if (btnCatManage) {
+    btnCatManage.addEventListener('click', () => openCategoryManagerModal());
+  }
   document.getElementById('btn-add-income-modal').addEventListener('click', () => openAddIncomeModal());
 
   // Allocations Addition Triggers
@@ -346,41 +501,7 @@ function calculateTotals() {
   };
 }
 
-// Render Incomes
-function renderIncomeTables() {
-  const gyewonTable = document.querySelector('#table-income-gyewon tbody');
-  const dongwookTable = document.querySelector('#table-income-dongwook tbody');
-
-  gyewonTable.innerHTML = '';
-  dongwookTable.innerHTML = '';
-
-  let sumG = 0, sumD = 0;
-
-  appState.incomes.forEach(inc => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'title')">${inc.title}</div></td>
-      <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
-      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')"><i class="fa-regular fa-calendar-check"></i> ${inc.day || '25일'}</div></td>
-      <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'note')">${inc.note || '-'}</div></td>
-      <td style="white-space:nowrap; text-align:right;">
-        <button class="btn btn-outline-primary btn-sm" title="수입/월급 수정" onclick="openEditIncomeModal('${inc.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button class="btn btn-outline-danger btn-sm" title="삭제" onclick="deleteItem('incomes', '${inc.id}')"><i class="fa-solid fa-trash"></i></button>
-      </td>
-    `;
-
-    if (inc.person === 'gyewon') {
-      sumG += Number(inc.amount) || 0;
-      gyewonTable.appendChild(tr);
-    } else {
-      sumD += Number(inc.amount) || 0;
-      dongwookTable.appendChild(tr);
-    }
-  });
-
-  document.getElementById('gyewon-income-sum').innerText = formatKRW(sumG);
-  document.getElementById('dongwook-income-sum').innerText = formatKRW(sumD);
-}
+// Render Incomes handles by unified renderIncomeTables() above
 
 // Render Allocations Tables
 function renderAllocationTables() {
@@ -796,28 +917,131 @@ function attachIncomeModalFormatters() {
   }
 }
 
+function openCategoryManagerModal() {
+  const body = document.getElementById('modal-body');
+  document.getElementById('modal-title').innerText = '수입 카테고리 설정';
+
+  if (!appState.categories) {
+    appState.categories = {
+      recipients: ['계원', '동욱', '공통 / 가구'],
+      incomeItems: ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입']
+    };
+  }
+
+  const renderCatLists = () => {
+    body.innerHTML = `
+      <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
+        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-user-tag"></i> 수입 대상자 카테고리</h4>
+        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="recipient-cat-tags">
+          ${appState.categories.recipients.map((r, idx) => `
+            <span class="badge badge-info" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+              ${r} 
+              <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="deleteRecipientCategory(${idx})"></i>
+            </span>
+          `).join('')}
+        </div>
+        <div class="flex-gap-2">
+          <input type="text" id="new-recipient-input" class="form-control form-control-sm" placeholder="새 대상자 이름 (예: 부부 비상금, 사업체)">
+          <button class="btn btn-primary btn-sm" onclick="addRecipientCategory()"><i class="fa-solid fa-plus"></i> 추가</button>
+        </div>
+      </div>
+
+      <div class="card-box" style="padding: 16px; background: rgba(0,0,0,0.2);">
+        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-list-check"></i> 수입 항목 카테고리</h4>
+        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="item-cat-tags">
+          ${appState.categories.incomeItems.map((item, idx) => `
+            <span class="badge badge-gyewon" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+              ${item} 
+              <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="deleteIncomeItemCategory(${idx})"></i>
+            </span>
+          `).join('')}
+        </div>
+        <div class="flex-gap-2">
+          <input type="text" id="new-item-cat-input" class="form-control form-control-sm" placeholder="새 수입 항목명 (예: 주식배당, 임대수익)">
+          <button class="btn btn-primary btn-sm" onclick="addIncomeItemCategory()"><i class="fa-solid fa-plus"></i> 추가</button>
+        </div>
+      </div>
+    `;
+  };
+
+  renderCatLists();
+  document.getElementById('item-modal').classList.add('active');
+
+  document.getElementById('modal-save-btn').onclick = () => {
+    closeModal();
+    saveState();
+    showToast('카테고리 설정이 저장되었습니다.');
+  };
+}
+
+window.addRecipientCategory = function() {
+  const input = document.getElementById('new-recipient-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val) {
+    if (!appState.categories.recipients.includes(val)) {
+      appState.categories.recipients.push(val);
+      saveState();
+      openCategoryManagerModal();
+    }
+  }
+};
+
+window.deleteRecipientCategory = function(idx) {
+  if (appState.categories.recipients.length <= 1) {
+    alert('최소 1개 이상의 대상 카테고리가 필요합니다.');
+    return;
+  }
+  appState.categories.recipients.splice(idx, 1);
+  saveState();
+  openCategoryManagerModal();
+};
+
+window.addIncomeItemCategory = function() {
+  const input = document.getElementById('new-item-cat-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val) {
+    if (!appState.categories.incomeItems.includes(val)) {
+      appState.categories.incomeItems.push(val);
+      saveState();
+      openCategoryManagerModal();
+    }
+  }
+};
+
+window.deleteIncomeItemCategory = function(idx) {
+  if (appState.categories.incomeItems.length <= 1) {
+    alert('최소 1개 이상의 항목 카테고리가 필요합니다.');
+    return;
+  }
+  appState.categories.incomeItems.splice(idx, 1);
+  saveState();
+  openCategoryManagerModal();
+};
+
 function openAddIncomeModal() {
   const body = document.getElementById('modal-body');
   document.getElementById('modal-title').innerText = '수입 항목 추가';
 
+  const recipientList = (appState.categories && appState.categories.recipients) ? appState.categories.recipients : ['계원', '동욱', '공통 / 가구'];
+  const recipientOptions = recipientList.map(r => `<option value="${r}">${r}</option>`).join('');
+
+  const itemCatList = (appState.categories && appState.categories.incomeItems) ? appState.categories.incomeItems : ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입'];
+  const itemCatOptions = itemCatList.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+
   body.innerHTML = `
     <div class="form-group">
-      <label>수입 대상자</label>
+      <label>수입 대상자 (카테고리)</label>
       <select id="modal-inc-person" class="form-select">
-        <option value="gyewon">계원</option>
-        <option value="dongwook">동욱</option>
-        <option value="common">공통 / 가구</option>
+        ${recipientOptions}
       </select>
     </div>
     <div class="form-group">
       <label>수입 항목 카테고리 선택</label>
       <select id="modal-inc-cat-select" class="form-select mb-2">
         <option value="">-- 카테고리 선택 --</option>
-        <option value="기본급 (급여)">기본급 (급여)</option>
-        <option value="보너스 / 상여금">보너스 / 상여금</option>
-        <option value="인센티브">인센티브</option>
-        <option value="부수입 / 알바">부수입 / 알바</option>
-        <option value="투자수익 / 배당">투자수익 / 배당</option>
+        ${itemCatOptions}
         <option value="CUSTOM">직접 입력...</option>
       </select>
       <input type="text" id="modal-inc-title" class="form-control" placeholder="수입 항목명 (예: 기본급(급여), 성과급)">
@@ -870,29 +1094,28 @@ function openEditIncomeModal(incId) {
   if (!inc) return;
 
   const body = document.getElementById('modal-body');
-  const personName = inc.person === 'gyewon' ? '계원' : (inc.person === 'dongwook' ? '동욱' : '공통');
-  document.getElementById('modal-title').innerText = `${personName} 수입/월급 수정`;
+  document.getElementById('modal-title').innerText = `${inc.person || '수입'} 수정`;
+
+  const recipientList = (appState.categories && appState.categories.recipients) ? appState.categories.recipients : ['계원', '동욱', '공통 / 가구'];
+  const recipientOptions = recipientList.map(r => `<option value="${r}" ${inc.person === r ? 'selected' : ''}>${r}</option>`).join('');
+
+  const itemCatList = (appState.categories && appState.categories.incomeItems) ? appState.categories.incomeItems : ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입'];
+  const itemCatOptions = itemCatList.map(cat => `<option value="${cat}" ${inc.title.includes(cat) ? 'selected' : ''}>${cat}</option>`).join('');
 
   const initialAmountFormatted = inc.amount ? Number(inc.amount).toLocaleString('ko-KR') : '';
 
   body.innerHTML = `
     <div class="form-group">
-      <label>수입 대상자</label>
+      <label>수입 대상자 (카테고리)</label>
       <select id="modal-inc-person" class="form-select">
-        <option value="gyewon" ${inc.person === 'gyewon' ? 'selected' : ''}>계원</option>
-        <option value="dongwook" ${inc.person === 'dongwook' ? 'selected' : ''}>동욱</option>
-        <option value="common" ${inc.person === 'common' ? 'selected' : ''}>공통 / 가구</option>
+        ${recipientOptions}
       </select>
     </div>
     <div class="form-group">
       <label>수입 항목 카테고리 선택</label>
       <select id="modal-inc-cat-select" class="form-select mb-2">
         <option value="">-- 카테고리 선택 --</option>
-        <option value="기본급 (급여)" ${inc.title.includes('기본급') || inc.title.includes('급여') ? 'selected' : ''}>기본급 (급여)</option>
-        <option value="보너스 / 상여금" ${inc.title.includes('보너스') || inc.title.includes('상여') ? 'selected' : ''}>보너스 / 상여금</option>
-        <option value="인센티브" ${inc.title.includes('인센티브') ? 'selected' : ''}>인센티브</option>
-        <option value="부수입 / 알바" ${inc.title.includes('부수입') || inc.title.includes('알바') ? 'selected' : ''}>부수입 / 알바</option>
-        <option value="투자수익 / 배당" ${inc.title.includes('투자') || inc.title.includes('배당') ? 'selected' : ''}>투자수익 / 배당</option>
+        ${itemCatOptions}
         <option value="CUSTOM">직접 입력...</option>
       </select>
       <input type="text" id="modal-inc-title" class="form-control" value="${inc.title}" placeholder="수입 항목명 입력">

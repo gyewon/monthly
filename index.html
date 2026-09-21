@@ -196,62 +196,68 @@
 
       <!-- TAB 2: INCOME & ALLOCATIONS -->
       <div id="tab-income-alloc" class="tab-page">
-        <!-- Income Management Banner -->
+        <!-- Income Management Card Box (Unified) -->
         <div class="card-box mb-4">
-          <div class="card-box-header">
+          <div class="card-box-header flex-wrap">
             <div>
-              <h3><i class="fa-solid fa-money-bill-wave"></i> 수입 (월급 & 추가 수입) 관리</h3>
-              <p class="text-muted">기본급 외에 보너스, 부수입 등 수입 항목을 자유롭게 추가 및 수정할 수 있습니다.</p>
+              <h3><i class="fa-solid fa-money-bill-wave"></i> 수입 (월급 & 추가 수입) 통합 관리</h3>
+              <p class="text-muted">수입 항목을 하나로 통합하여 대상을 카테고리별로 분류하고 관리합니다.</p>
             </div>
-            <button class="btn btn-primary btn-sm" id="btn-add-income-modal">
-              <i class="fa-solid fa-plus"></i> 수입 항목 추가
-            </button>
+            <div class="flex-gap-2">
+              <button class="btn btn-secondary btn-sm" id="btn-manage-categories">
+                <i class="fa-solid fa-gear"></i> 카테고리 설정
+              </button>
+              <button class="btn btn-primary btn-sm" id="btn-add-income-modal">
+                <i class="fa-solid fa-plus"></i> 수입 항목 추가
+              </button>
+            </div>
           </div>
 
-          <div class="grid-2-col">
-            <!-- Gyewon Incomes -->
-            <div class="income-person-block">
-              <div class="person-header gyewon">
-                <span class="person-name"><i class="fa-solid fa-user"></i> 계원 수입 목록</span>
-                <span class="person-total" id="gyewon-income-sum">4,700,000 원</span>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-sm" id="table-income-gyewon">
-                  <thead>
-                    <tr>
-                      <th>수입 항목명</th>
-                      <th>금액</th>
-                      <th>입금일(월급날)</th>
-                      <th>비고</th>
-                      <th style="width:90px; text-align:right;">관리</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
+          <!-- Income Recipient Filter Pills -->
+          <div class="filter-toolbar mb-3">
+            <div class="filter-group">
+              <label><i class="fa-solid fa-filter"></i> 대상 필터:</label>
+              <div id="income-recipient-pills" class="flex-gap-2">
+                <!-- Dynamically populated filter buttons -->
               </div>
             </div>
+          </div>
 
-            <!-- Dongwook Incomes -->
-            <div class="income-person-block">
-              <div class="person-header dongwook">
-                <span class="person-name"><i class="fa-solid fa-user"></i> 동욱 수입 목록</span>
-                <span class="person-total" id="dongwook-income-sum">3,750,000 원</span>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-sm" id="table-income-dongwook">
-                  <thead>
-                    <tr>
-                      <th>수입 항목명</th>
-                      <th>금액</th>
-                      <th>입금일(월급날)</th>
-                      <th>비고</th>
-                      <th style="width:90px; text-align:right;">관리</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
+          <!-- Income Summary Bar -->
+          <div class="income-summary-banner mb-3">
+            <div class="stat-pill">
+              <span class="label">계원 수입:</span>
+              <span class="value text-gyewon" id="gyewon-income-sum">0 원</span>
             </div>
+            <div class="stat-pill">
+              <span class="label">동욱 수입:</span>
+              <span class="value text-dongwook" id="dongwook-income-sum">0 원</span>
+            </div>
+            <div class="stat-pill">
+              <span class="label">기타/공통 수입:</span>
+              <span class="value" id="common-income-sum">0 원</span>
+            </div>
+            <div class="stat-pill highlight">
+              <span class="label">총 수입 합계:</span>
+              <span class="value text-success" id="unified-income-total">0 원</span>
+            </div>
+          </div>
+
+          <!-- Consolidated Unified Income Table -->
+          <div class="table-responsive">
+            <table class="table table-editable" id="table-income-unified">
+              <thead>
+                <tr>
+                  <th>수입 대상</th>
+                  <th>수입 항목명</th>
+                  <th>금액 (원)</th>
+                  <th>입금일(월급날)</th>
+                  <th>비고</th>
+                  <th style="width:90px; text-align:right;">관리</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
         </div>
 
