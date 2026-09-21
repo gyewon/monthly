@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>동욱 & 계원 월별 재정 및 고정지출 관리</title>
+  <!-- Google Fonts: Pretendard & Inter -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-wallet"></i>
+        </div>
+        <div class="brand-text">
+          <h2>동욱 & 계원</h2>
+          <span class="sub-text">월별 재정 관리</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="dashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>대시보드</span>
+        </button>
+        <button class="nav-item" data-tab="income-alloc">
+          <i class="fa-solid fa-hand-holding-dollar"></i>
+          <span>수입 & 배분 관리</span>
+        </button>
+        <button class="nav-item" data-tab="fixed-expenses">
+          <i class="fa-solid fa-receipt"></i>
+          <span>고정지출 관리</span>
+        </button>
+        <button class="nav-item" data-tab="history">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>월별 기록 & 추이</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-month-selector">
+        <label><i class="fa-regular fa-calendar"></i> 대상 월 선택</label>
+        <input type="month" id="global-month-picker" value="2026-03">
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="action-buttons-stack">
+          <button id="btn-save-snapshot" class="btn btn-secondary btn-sm" title="현재 데이터 추이에 저장">
+            <i class="fa-solid fa-camera"></i> 이달 내역 마감/저장
+          </button>
+          <button id="btn-reset-data" class="btn btn-outline-danger btn-sm" title="초기 엑셀 데이터로 복원">
+            <i class="fa-solid fa-rotate-left"></i> 엑셀 초기값 리셋
+          </button>
+        </div>
+        <div class="theme-toggle-wrap">
+          <span class="theme-label"><i class="fa-solid fa-moon"></i> 다크 모드</span>
+          <label class="switch">
+            <input type="checkbox" id="theme-toggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-title">
+          <h1 id="page-title">재정 대시보드</h1>
+          <p class="header-subtitle" id="page-subtitle">수입, 배분, 고정지출 및 남은 잔액을 실시간으로 확인합니다.</p>
+        </div>
+        <div class="header-actions">
+          <button id="btn-copy-summary" class="btn btn-glass">
+            <i class="fa-regular fa-copy"></i> 요약 복사
+          </button>
+          <button id="btn-export-json" class="btn btn-glass">
+            <i class="fa-solid fa-download"></i> 백업 다운로드
+          </button>
+          <button id="btn-import-trigger" class="btn btn-glass">
+            <i class="fa-solid fa-upload"></i> 복원
+          </button>
+          <input type="file" id="import-json-input" accept=".json" style="display: none;">
+        </div>
+      </header>
+
+      <!-- Key KPI Cards Banner -->
+      <section class="kpi-banner">
+        <!-- Card 1: Combined Total Income -->
+        <div class="kpi-card income-kpi">
+          <div class="kpi-header">
+            <span class="kpi-title">총 수입</span>
+            <div class="kpi-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div>
+          </div>
+          <div class="kpi-value" id="kpi-total-income">8,450,000 원</div>
+          <div class="kpi-sub">
+            <span class="badge badge-gyewon">계원 <span id="kpi-income-gyewon">470만</span></span>
+            <span class="badge badge-dongwook">동욱 <span id="kpi-income-dongwook">375만</span></span>
+          </div>
+        </div>
+
+        <!-- Card 2: Combined Total Expenses / Allocations -->
+        <div class="kpi-card expense-kpi">
+          <div class="kpi-header">
+            <span class="kpi-title">총 배분 및 지출</span>
+            <div class="kpi-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+          </div>
+          <div class="kpi-value" id="kpi-total-expenses">0 원</div>
+          <div class="kpi-sub">
+            <span>고정비 <strong id="kpi-fixed-total">1,774,768원</strong></span>
+          </div>
+        </div>
+
+        <!-- Card 3: Remaining Balance (Surplus) - HIGHLIGHTED -->
+        <div class="kpi-card balance-kpi highlight">
+          <div class="kpi-header">
+            <span class="kpi-title">남은 잔액 (여유자금)</span>
+            <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
+          </div>
+          <div class="kpi-value" id="kpi-remaining-balance">0 원</div>
+          <div class="kpi-sub">
+            <span id="kpi-balance-status">수입 대비 여유자금 잔여</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Total Savings & Investments -->
+        <div class="kpi-card savings-kpi">
+          <div class="kpi-header">
+            <span class="kpi-title">총 저축 / 적금 / 투자</span>
+            <div class="kpi-icon"><i class="fa-solid fa-piggy-bank"></i></div>
+          </div>
+          <div class="kpi-value" id="kpi-total-savings">0 원</div>
+          <div class="kpi-sub">
+            <span>총 수입 대비 저축률 <strong id="kpi-savings-rate">0%</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 1: DASHBOARD -->
+      <div id="tab-dashboard" class="tab-page active">
+        <!-- Monthly Trend Chart Section -->
+        <div class="card-box mb-4">
+          <div class="card-box-header">
+            <div>
+              <h3><i class="fa-solid fa-chart-line"></i> 월별 수입 및 지출 추이 (Month-over-Month Trend)</h3>
+              <p class="text-muted">매월 수입, 총지출, 고정지출 및 남은 잔액의 변동 추이입니다.</p>
+            </div>
+            <div class="chart-legend-custom">
+              <span class="legend-item"><span class="color-dot income"></span> 수입</span>
+              <span class="legend-item"><span class="color-dot expense"></span> 총지출/배분</span>
+              <span class="legend-item"><span class="color-dot fixed"></span> 고정지출</span>
+              <span class="legend-item"><span class="color-dot balance"></span> 남은잔액</span>
+            </div>
+          </div>
+          <div class="chart-container-large">
+            <canvas id="monthlyTrendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Grid 2 Columns: Category & Payment Method Charts -->
+        <div class="grid-2-col mb-4">
+          <div class="card-box">
+            <div class="card-box-header">
+              <h3><i class="fa-solid fa-chart-pie"></i> 카테고리별 배분 비중</h3>
+            </div>
+            <div class="chart-container-medium">
+              <canvas id="categoryPieChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card-box">
+            <div class="card-box-header">
+              <h3><i class="fa-solid fa-credit-card"></i> 결제수단별 고정지출 요약</h3>
+            </div>
+            <div id="payment-method-summary" class="payment-method-grid mb-3">
+              <!-- Dynamically Populated -->
+            </div>
+            <div class="chart-container-small">
+              <canvas id="paymentMethodChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule / Calendar Highlights -->
+        <div class="card-box">
+          <div class="card-box-header">
+            <h3><i class="fa-regular fa-calendar-check"></i> 주요 이체일자별 고정지출 타임라인</h3>
+            <span class="badge badge-info">매월 자동이체 & 납부일</span>
+          </div>
+          <div id="schedule-timeline" class="timeline-container">
+            <!-- Dynamically Populated Timeline Cards -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: INCOME & ALLOCATIONS -->
+      <div id="tab-income-alloc" class="tab-page">
+        <!-- Income Management Banner -->
+        <div class="card-box mb-4">
+          <div class="card-box-header">
+            <div>
+              <h3><i class="fa-solid fa-money-bill-wave"></i> 수입 (월급 & 추가 수입) 관리</h3>
+              <p class="text-muted">기본급 외에 보너스, 부수입 등 수입 항목을 자유롭게 추가 및 수정할 수 있습니다.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-add-income-modal">
+              <i class="fa-solid fa-plus"></i> 수입 항목 추가
+            </button>
+          </div>
+
+          <div class="grid-2-col">
+            <!-- Gyewon Incomes -->
+            <div class="income-person-block">
+              <div class="person-header gyewon">
+                <span class="person-name"><i class="fa-solid fa-user"></i> 계원 수입 목록</span>
+                <span class="person-total" id="gyewon-income-sum">4,700,000 원</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm" id="table-income-gyewon">
+                  <thead>
+                    <tr>
+                      <th>수입 항목명</th>
+                      <th>금액</th>
+                      <th>비고</th>
+                      <th style="width:50px;">삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Dongwook Incomes -->
+            <div class="income-person-block">
+              <div class="person-header dongwook">
+                <span class="person-name"><i class="fa-solid fa-user"></i> 동욱 수입 목록</span>
+                <span class="person-total" id="dongwook-income-sum">3,750,000 원</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm" id="table-income-dongwook">
+                  <thead>
+                    <tr>
+                      <th>수입 항목명</th>
+                      <th>금액</th>
+                      <th>비고</th>
+                      <th style="width:50px;">삭제</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Allocations Split View -->
+        <div class="grid-2-col">
+          <!-- Gyewon Allocations -->
+          <div class="card-box">
+            <div class="card-box-header">
+              <div>
+                <h3><span class="badge badge-gyewon">계원</span> 월급 배분 내역</h3>
+                <p class="text-muted">항목 클릭 시 그 자리에서 셀 직접 수정 가능</p>
+              </div>
+              <button class="btn btn-outline-primary btn-sm" id="btn-add-alloc-gyewon">
+                <i class="fa-solid fa-plus"></i> 항목 추가
+              </button>
+            </div>
+
+            <div class="allocation-summary-bar">
+              <div>총 수입: <strong id="g-summary-income">4,700,000</strong>원</div>
+              <div>배분 합계: <strong id="g-summary-alloc">0</strong>원</div>
+              <div>잔액: <span class="badge-balance" id="g-summary-remain">0원</span></div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-editable" id="table-alloc-gyewon">
+                <thead>
+                  <tr>
+                    <th>항목명</th>
+                    <th>금액 (원)</th>
+                    <th>은행/처</th>
+                    <th>일자/이체</th>
+                    <th>카테고리</th>
+                    <th style="width:40px;"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Dongwook Allocations -->
+          <div class="card-box">
+            <div class="card-box-header">
+              <div>
+                <h3><span class="badge badge-dongwook">동욱</span> 월급 배분 내역</h3>
+                <p class="text-muted">항목 클릭 시 그 자리에서 셀 직접 수정 가능</p>
+              </div>
+              <button class="btn btn-outline-primary btn-sm" id="btn-add-alloc-dongwook">
+                <i class="fa-solid fa-plus"></i> 항목 추가
+              </button>
+            </div>
+
+            <div class="allocation-summary-bar">
+              <div>총 수입: <strong id="d-summary-income">3,750,000</strong>원</div>
+              <div>배분 합계: <strong id="d-summary-alloc">0</strong>원</div>
+              <div>잔액: <span class="badge-balance" id="d-summary-remain">0원</span></div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-editable" id="table-alloc-dongwook">
+                <thead>
+                  <tr>
+                    <th>항목명</th>
+                    <th>금액 (원)</th>
+                    <th>은행/처</th>
+                    <th>일자/이체</th>
+                    <th>카테고리</th>
+                    <th style="width:40px;"></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: FIXED EXPENSES -->
+      <div id="tab-fixed-expenses" class="tab-page">
+        <div class="card-box mb-4">
+          <div class="card-box-header flex-wrap">
+            <div>
+              <h3><i class="fa-solid fa-receipt"></i> 매월 고정지출 상세 리스트</h3>
+              <p class="text-muted">셀을 클릭하여 직접 수정하거나 납부 여부를 체크하세요.</p>
+            </div>
+            <div class="flex-gap-2">
+              <button class="btn btn-primary btn-sm" id="btn-add-fixed-expense">
+                <i class="fa-solid fa-plus"></i> 고정지출 항목 추가
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter Toolbar -->
+          <div class="filter-toolbar">
+            <div class="filter-group">
+              <label><i class="fa-solid fa-filter"></i> 결제수단 필터:</label>
+              <select id="filter-method" class="form-select form-select-sm">
+                <option value="ALL">전체 결제수단</option>
+                <option value="현금">현금</option>
+                <option value="하나카드">하나카드</option>
+                <option value="오빠카드">오빠카드 (삼성/카드)</option>
+                <option value="우리카드">우리카드</option>
+                <option value="신한카드">신한카드</option>
+                <option value="카드">기타 카드</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>카테고리 필터:</label>
+              <select id="filter-category" class="form-select form-select-sm">
+                <option value="ALL">전체 카테고리</option>
+                <option value="보험">보험</option>
+                <option value="구독">구독</option>
+                <option value="용돈">용돈</option>
+                <option value="핸드폰요금">핸드폰요금</option>
+                <option value="주거">주거(관리비)</option>
+                <option value="곗돈">곗돈</option>
+                <option value="교통">교통</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label>납부상태 필터:</label>
+              <select id="filter-paid" class="form-select form-select-sm">
+                <option value="ALL">전체 보기</option>
+                <option value="PAID">납부완료</option>
+                <option value="UNPAID">미납/이체예정</option>
+              </select>
+            </div>
+
+            <div class="search-group">
+              <input type="text" id="search-fixed-expense" class="form-control form-control-sm" placeholder="항목명/비고 검색...">
+            </div>
+          </div>
+
+          <!-- Fixed Expenses Stats Bar -->
+          <div class="fixed-stats-summary mb-3">
+            <div class="stat-pill">
+              <span class="label">고정비 기준 합계:</span>
+              <span class="value" id="fixed-stat-base">1,774,768 원</span>
+            </div>
+            <div class="stat-pill">
+              <span class="label">3월 실제 지출 합계:</span>
+              <span class="value text-accent" id="fixed-stat-actual">1,698,448 원</span>
+            </div>
+            <div class="stat-pill">
+              <span class="label">납부 완료율:</span>
+              <span class="value text-success" id="fixed-stat-completion">0 / 13 (0%)</span>
+            </div>
+          </div>
+
+          <!-- Main Fixed Expenses Table -->
+          <div class="table-responsive">
+            <table class="table table-editable" id="table-fixed-expenses">
+              <thead>
+                <tr>
+                  <th style="width:45px;">완료</th>
+                  <th>항목명</th>
+                  <th>기준금액 (원)</th>
+                  <th>3월 실지출 (원)</th>
+                  <th>이체일자</th>
+                  <th>결제수단</th>
+                  <th>카테고리</th>
+                  <th>참고 / 비고</th>
+                  <th style="width:40px;"></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: MONTHLY HISTORY & TRENDS -->
+      <div id="tab-history" class="tab-page">
+        <div class="card-box mb-4">
+          <div class="card-box-header">
+            <div>
+              <h3><i class="fa-solid fa-clock-rotate-left"></i> 월별 재정 기록 & 마감 관리</h3>
+              <p class="text-muted">매월 재정을 마감하고 이전 달의 기록을 보관하여 지출 변화를 추적합니다.</p>
+            </div>
+            <button class="btn btn-primary" id="btn-save-history-now">
+              <i class="fa-solid fa-floppy-disk"></i> 현재 달 기록 마감 저장
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table" id="table-monthly-history">
+              <thead>
+                <tr>
+                  <th>월</th>
+                  <th>총 수입</th>
+                  <th>총 지출/배분</th>
+                  <th>고정지출</th>
+                  <th>총 저축/투자</th>
+                  <th>남은 잔액</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal for Adding/Editing Items -->
+  <div class="modal-overlay" id="item-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title">항목 추가</h3>
+        <button class="modal-close" id="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Dynamic form inputs built in JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modal-cancel-btn">취소</button>
+        <button class="btn btn-primary" id="modal-save-btn">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
