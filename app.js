@@ -656,6 +656,21 @@ function renderHistoryTable() {
   });
 }
 
+function formatDayInput(val) {
+  if (!val) return '';
+  val = String(val).trim();
+  // Pure numbers like "25" -> "25일"
+  if (/^\d+$/.test(val)) {
+    return val + '일';
+  }
+  // Slash numbers like "2/26" -> "2일/26일"
+  if (/^\d+\/\d+$/.test(val)) {
+    const parts = val.split('/');
+    return `${parts[0]}일/${parts[1]}일`;
+  }
+  return val;
+}
+
 // Direct Inline Cell Editor
 function editInlineCell(element, pathStr, itemId, fieldName, type = 'text') {
   if (element.querySelector('input')) return; // Already editing
@@ -674,7 +689,11 @@ function editInlineCell(element, pathStr, itemId, fieldName, type = 'text') {
 
   const finishEdit = () => {
     let newVal = input.value.trim();
-    if (type === 'number') newVal = Number(newVal) || 0;
+    if (type === 'number') {
+      newVal = Number(newVal) || 0;
+    } else if (fieldName === 'day' || fieldName === 'schedule') {
+      newVal = formatDayInput(newVal);
+    }
     
     setFieldValue(pathStr, itemId, fieldName, newVal);
     saveState();
@@ -778,7 +797,7 @@ function openAddIncomeModal() {
     const person = document.getElementById('modal-inc-person').value;
     const title = document.getElementById('modal-inc-title').value.trim();
     const amount = Number(document.getElementById('modal-inc-amount').value) || 0;
-    const day = document.getElementById('modal-inc-day').value.trim() || '25일';
+    const day = formatDayInput(document.getElementById('modal-inc-day').value.trim() || '25일');
     const note = document.getElementById('modal-inc-note').value.trim();
 
     if (!title) { alert('수입 항목명을 입력하세요.'); return; }
@@ -838,7 +857,7 @@ function openEditIncomeModal(incId) {
     inc.person = document.getElementById('modal-inc-person').value;
     inc.title = document.getElementById('modal-inc-title').value.trim();
     inc.amount = Number(document.getElementById('modal-inc-amount').value) || 0;
-    inc.day = document.getElementById('modal-inc-day').value.trim() || '25일';
+    inc.day = formatDayInput(document.getElementById('modal-inc-day').value.trim() || '25일');
     inc.note = document.getElementById('modal-inc-note').value.trim();
 
     closeModal();
