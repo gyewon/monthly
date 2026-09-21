@@ -165,9 +165,12 @@ function renderIncomeTables() {
     else if (inc.person === 'dongwook' || inc.person === '동욱') { badgeClass = 'badge-dongwook'; personLabel = '동욱'; }
     else if (inc.person === 'common' || inc.person === '공통 / 가구') { badgeClass = 'badge-info'; personLabel = '공통/가구'; }
 
+    const categoryName = inc.category || inc.title || '기본급 (급여)';
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="badge ${badgeClass}">${personLabel}</span></td>
+      <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineCategory(this, '${inc.id}')"><span class="badge badge-secondary" style="font-weight:600; cursor:pointer;">${categoryName}</span></div></td>
       <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'title')">${inc.title}</div></td>
       <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급/금액 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
       <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')"><i class="fa-regular fa-calendar-check"></i> ${inc.day || '25일'}</div></td>
@@ -919,7 +922,7 @@ function attachIncomeModalFormatters() {
 
 function openCategoryManagerModal() {
   const body = document.getElementById('modal-body');
-  document.getElementById('modal-title').innerText = '수입 카테고리 설정';
+  document.getElementById('modal-title').innerText = '수입 카테고리 설정 (추가 / 수정 / 삭제)';
 
   if (!appState.categories) {
     appState.categories = {
@@ -934,9 +937,10 @@ function openCategoryManagerModal() {
         <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-user-tag"></i> 수입 대상자 카테고리</h4>
         <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="recipient-cat-tags">
           ${appState.categories.recipients.map((r, idx) => `
-            <span class="badge badge-info" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+            <span class="badge badge-info" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
               ${r} 
-              <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="deleteRecipientCategory(${idx})"></i>
+              <i class="fa-solid fa-pen-to-square" style="cursor:pointer;" title="이름 수정" onclick="editRecipientCategory(${idx})"></i>
+              <i class="fa-solid fa-xmark" style="cursor:pointer;" title="삭제" onclick="deleteRecipientCategory(${idx})"></i>
             </span>
           `).join('')}
         </div>
@@ -950,9 +954,10 @@ function openCategoryManagerModal() {
         <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-list-check"></i> 수입 항목 카테고리</h4>
         <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="item-cat-tags">
           ${appState.categories.incomeItems.map((item, idx) => `
-            <span class="badge badge-gyewon" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+            <span class="badge badge-gyewon" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
               ${item} 
-              <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="deleteIncomeItemCategory(${idx})"></i>
+              <i class="fa-solid fa-pen-to-square" style="cursor:pointer;" title="이름 수정" onclick="editIncomeItemCategory(${idx})"></i>
+              <i class="fa-solid fa-xmark" style="cursor:pointer;" title="삭제" onclick="deleteIncomeItemCategory(${idx})"></i>
             </span>
           `).join('')}
         </div>
@@ -970,9 +975,45 @@ function openCategoryManagerModal() {
   document.getElementById('modal-save-btn').onclick = () => {
     closeModal();
     saveState();
+    renderIncomeTables();
     showToast('카테고리 설정이 저장되었습니다.');
   };
 }
+
+window.editRecipientCategory = function(idx) {
+  const oldVal = appState.categories.recipients[idx];
+  const newVal = prompt('수입 대상자 카테고리 이름을 수정하세요:', oldVal);
+  if (newVal !== null && newVal.trim() !== '' && newVal.trim() !== oldVal) {
+    const trimmed = newVal.trim();
+    appState.categories.recipients[idx] = trimmed;
+    (appState.incomes || []).forEach(inc => {
+      if (inc.person === oldVal) inc.person = trimmed;
+    });
+    if (currentIncomeRecipientFilter === oldVal) {
+      currentIncomeRecipientFilter = trimmed;
+    }
+    saveState();
+    openCategoryManagerModal();
+    renderIncomeTables();
+    showToast(`수입 대상 카테고리가 '${trimmed}'(으)로 수정되었습니다.`);
+  }
+};
+
+window.editIncomeItemCategory = function(idx) {
+  const oldVal = appState.categories.incomeItems[idx];
+  const newVal = prompt('수입 항목 카테고리 이름을 수정하세요:', oldVal);
+  if (newVal !== null && newVal.trim() !== '' && newVal.trim() !== oldVal) {
+    const trimmed = newVal.trim();
+    appState.categories.incomeItems[idx] = trimmed;
+    (appState.incomes || []).forEach(inc => {
+      if (inc.category === oldVal) inc.category = trimmed;
+    });
+    saveState();
+    openCategoryManagerModal();
+    renderIncomeTables();
+    showToast(`수입 항목 카테고리가 '${trimmed}'(으)로 수정되었습니다.`);
+  }
+};
 
 window.addRecipientCategory = function() {
   const input = document.getElementById('new-recipient-input');
@@ -983,6 +1024,7 @@ window.addRecipientCategory = function() {
       appState.categories.recipients.push(val);
       saveState();
       openCategoryManagerModal();
+      renderIncomeTables();
     }
   }
 };
@@ -992,9 +1034,10 @@ window.deleteRecipientCategory = function(idx) {
     alert('최소 1개 이상의 대상 카테고리가 필요합니다.');
     return;
   }
-  appState.categories.recipients.splice(idx, 1);
+  const removed = appState.categories.recipients.splice(idx, 1);
   saveState();
   openCategoryManagerModal();
+  renderIncomeTables();
 };
 
 window.addIncomeItemCategory = function() {
@@ -1006,6 +1049,7 @@ window.addIncomeItemCategory = function() {
       appState.categories.incomeItems.push(val);
       saveState();
       openCategoryManagerModal();
+      renderIncomeTables();
     }
   }
 };
@@ -1018,6 +1062,53 @@ window.deleteIncomeItemCategory = function(idx) {
   appState.categories.incomeItems.splice(idx, 1);
   saveState();
   openCategoryManagerModal();
+  renderIncomeTables();
+};
+
+window.editInlineCategory = function(element, incId) {
+  const inc = appState.incomes.find(i => i.id === incId);
+  if (!inc) return;
+
+  const itemCatList = (appState.categories && appState.categories.incomeItems) ? appState.categories.incomeItems : ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입'];
+
+  const select = document.createElement('select');
+  select.className = 'form-select form-select-sm';
+  itemCatList.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.innerText = cat;
+    if ((inc.category || inc.title) === cat) opt.selected = true;
+    select.appendChild(opt);
+  });
+  const customOpt = document.createElement('option');
+  customOpt.value = 'NEW_CUSTOM';
+  customOpt.innerText = '+ 새 카테고리 추가...';
+  select.appendChild(customOpt);
+
+  element.innerHTML = '';
+  element.appendChild(select);
+  select.focus();
+
+  const finishEdit = () => {
+    const val = select.value;
+    if (val === 'NEW_CUSTOM') {
+      const newCat = prompt('새 수입 항목 카테고리명을 입력하세요:');
+      if (newCat && newCat.trim()) {
+        const trimmed = newCat.trim();
+        if (!appState.categories.incomeItems.includes(trimmed)) {
+          appState.categories.incomeItems.push(trimmed);
+        }
+        inc.category = trimmed;
+      }
+    } else {
+      inc.category = val;
+    }
+    saveState();
+    renderIncomeTables();
+  };
+
+  select.onchange = finishEdit;
+  select.onblur = finishEdit;
 };
 
 function openAddIncomeModal() {
