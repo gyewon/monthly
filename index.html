@@ -93,14 +93,13 @@
             <div class="kpi-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div>
           </div>
           <div class="kpi-value" id="kpi-total-income">8,450,000 원</div>
-          <div class="kpi-sub">
-            <span class="badge badge-gyewon">계원 <span id="kpi-income-gyewon">470만</span></span>
-            <span class="badge badge-dongwook">동욱 <span id="kpi-income-dongwook">375만</span></span>
+          <div class="kpi-sub" id="kpi-income-breakdown">
+            <!-- Income breakdown badges by category will be generated here -->
           </div>
         </div>
 
         <!-- Card 2: Combined Total Expenses / Allocations -->
-        <div class="kpi-card expense-kpi">
+        <div class="kpi-card expense-kpi" style="display: none;">
           <div class="kpi-header">
             <span class="kpi-title">총 배분 및 지출</span>
             <div class="kpi-icon"><i class="fa-solid fa-cart-shopping"></i></div>
@@ -111,13 +110,13 @@
           </div>
         </div>
 
-        <!-- Card 3: Remaining Balance (Surplus) - HIGHLIGHTED -->
-        <div class="kpi-card balance-kpi highlight">
+        <!-- Card 3: Remaining Balance (Surplus) -->
+        <div class="kpi-card balance-kpi">
           <div class="kpi-header">
-            <span class="kpi-title">가구 총 남은 잔액</span>
+            <span class="kpi-title">총 남은 잔액</span>
             <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
           </div>
-          <div class="kpi-value" id="kpi-remaining-balance">0 원</div>
+          <div class="kpi-value" id="kpi-remaining-balance" style="font-size: 1.25rem;">0 원</div>
           <div class="kpi-sub flex-wrap" style="gap: 6px; margin-top: 4px;">
             <span class="badge badge-gyewon">계원 잔액: <strong id="kpi-remain-gyewon">0원</strong></span>
             <span class="badge badge-dongwook">동욱 잔액: <strong id="kpi-remain-dongwook">0원</strong></span>
@@ -263,12 +262,32 @@
         </div>
 
         <!-- Allocations Split View -->
-        <div class="grid-2-col">
+        <div class="card-box-header flex-wrap mt-4 mb-3" style="padding: 0 4px;">
+          <div>
+            <h3><i class="fa-solid fa-layer-group"></i> 월급 배분 내역</h3>
+            <p class="text-muted">수입 대비 개인별 배분 금액 및 남은 잔액을 실시간으로 확인하고 관리합니다.</p>
+          </div>
+          <div class="flex-gap-2 align-items-center">
+            <button class="btn btn-secondary btn-sm" id="btn-manage-alloc-categories">
+              <i class="fa-solid fa-gear"></i> 카테고리 설정
+            </button>
+            <div class="filter-toolbar" style="margin-bottom: 0;">
+              <div class="filter-group">
+                <label><i class="fa-solid fa-filter"></i> 대상 필터:</label>
+                <div id="alloc-recipient-pills" class="flex-gap-2">
+                  <!-- Dynamically populated filter buttons -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2-col" id="allocations-container">
           <!-- Gyewon Allocations -->
-          <div class="card-box">
+          <div class="card-box" id="alloc-gyewon-card">
             <div class="card-box-header">
               <div>
-                <h3><span class="badge badge-gyewon">계원</span> 월급 배분 내역</h3>
+                <h3><span class="badge badge-gyewon" id="alloc-gyewon-badge">계원</span> 월급 배분 내역</h3>
                 <p class="text-muted">항목 클릭 시 그 자리에서 셀 직접 수정 가능</p>
               </div>
               <button class="btn btn-outline-primary btn-sm" id="btn-add-alloc-gyewon">
@@ -289,7 +308,8 @@
                     <th>항목명</th>
                     <th>금액 (원)</th>
                     <th>은행/처</th>
-                    <th>일자/이체</th>
+                    <th>이체일자</th>
+                    <th>이체방식</th>
                     <th>카테고리</th>
                     <th style="width:40px;"></th>
                   </tr>
@@ -300,10 +320,10 @@
           </div>
 
           <!-- Dongwook Allocations -->
-          <div class="card-box">
+          <div class="card-box" id="alloc-dongwook-card">
             <div class="card-box-header">
               <div>
-                <h3><span class="badge badge-dongwook">동욱</span> 월급 배분 내역</h3>
+                <h3><span class="badge badge-dongwook" id="alloc-dongwook-badge">동욱</span> 월급 배분 내역</h3>
                 <p class="text-muted">항목 클릭 시 그 자리에서 셀 직접 수정 가능</p>
               </div>
               <button class="btn btn-outline-primary btn-sm" id="btn-add-alloc-dongwook">
@@ -324,7 +344,8 @@
                     <th>항목명</th>
                     <th>금액 (원)</th>
                     <th>은행/처</th>
-                    <th>일자/이체</th>
+                    <th>이체일자</th>
+                    <th>이체방식</th>
                     <th>카테고리</th>
                     <th style="width:40px;"></th>
                   </tr>
