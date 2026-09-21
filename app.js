@@ -56,6 +56,19 @@ const DEFAULT_EXCEL_DATA = {
   ]
 };
 
+// Supabase Integration Credentials
+const SUPABASE_URL = 'https://bdnqlcrpytkwuaonhgmm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkbnFsY3JweXRrd3Vhb25oZ21tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MjYyMDEsImV4cCI6MjEwNTUwMjIwMX0.QLt4HgVyCoAR2oy1R5O3SdNe7N3XtVxP7rjabS3j_ew';
+
+let supabaseClient = null;
+if (window.supabase) {
+  try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) {
+    console.error('Supabase Client Init Error:', e);
+  }
+}
+
 // Application State
 let appState = loadState();
 
@@ -72,9 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function initApp() {
   setupEventListeners();
   renderAll();
+  syncFromSupabase();
 }
 
-// State Management & LocalStorage
+// State Management & LocalStorage & Supabase
 function loadState() {
   const saved = localStorage.getItem('dongwook_gyewon_budget_app_v2');
   if (saved) {
@@ -90,6 +104,81 @@ function loadState() {
 function saveState() {
   localStorage.setItem('dongwook_gyewon_budget_app_v2', JSON.stringify(appState));
   renderAll();
+  syncToSupabase();
+}
+
+// Supabase Status Indicator Update
+function updateSupabaseBadge(isConnected, message = '') {
+  const badge = document.getElementById('supabase-status-badge');
+  if (!badge) return;
+
+  if (isConnected) {
+    badge.className = 'badge badge-gyewon';
+    badge.innerHTML = '<i class="fa-solid fa-cloud-check"></i> Supabase 연동 완료';
+  } else {
+    badge.className = 'badge badge-info';
+    badge.innerHTML = `<i class="fa-solid fa-cloud"></i> 로컬 저장소 사용 (${message || '테이블 생성 필요'})`;
+  }
+}
+
+// Sync from Supabase Cloud
+async function syncFromSupabase() {
+  if (!supabaseClient) {
+    updateSupabaseBadge(false, 'SDK 미로드');
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from('monthly_budget_data')
+      .select('data')
+      .eq('id', 'main')
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No row exists yet, push current local appState to Supabase
+        await syncToSupabase();
+      } else {
+        console.warn('Supabase fetch notice:', error.message);
+        updateSupabaseBadge(false, '테이블 준비 중');
+      }
+    } else if (data && data.data) {
+      appState = data.data;
+      localStorage.setItem('dongwook_gyewon_budget_app_v2', JSON.stringify(appState));
+      renderAll();
+      updateSupabaseBadge(true);
+      showToast('Supabase 클라우드에서 데이터를 연동했습니다!');
+    }
+  } catch (err) {
+    console.error('Supabase sync error:', err);
+    updateSupabaseBadge(false, '연결 실패');
+  }
+}
+
+// Sync to Supabase Cloud
+async function syncToSupabase() {
+  if (!supabaseClient) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from('monthly_budget_data')
+      .upsert({
+        id: 'main',
+        data: appState,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.warn('Supabase save notice:', error.message);
+      updateSupabaseBadge(false, '테이블 생성 필요');
+    } else {
+      updateSupabaseBadge(true);
+    }
+  } catch (err) {
+    console.error('Supabase save error:', err);
+    updateSupabaseBadge(false, '저장 오류');
+  }
 }
 
 // Event Listeners Registration
@@ -138,6 +227,10 @@ function setupEventListeners() {
   });
 
   // Action Buttons
+  document.getElementById('btn-sync-supabase').addEventListener('click', async () => {
+    showToast('Supabase 동기화를 진행합니다...');
+    await syncFromSupabase();
+  });
   document.getElementById('btn-copy-summary').addEventListener('click', copySummaryToClipboard);
   document.getElementById('btn-export-json').addEventListener('click', exportBackupJSON);
   
