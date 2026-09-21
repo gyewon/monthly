@@ -138,14 +138,6 @@ function setupEventListeners() {
   });
 
   // Action Buttons
-  document.getElementById('btn-reset-data').addEventListener('click', () => {
-    if (confirm('초기 엑셀 수치로 모든 데이터를 복원하시겠습니까? (수정하신 내용이 초기화됩니다)')) {
-      appState = JSON.parse(JSON.stringify(DEFAULT_EXCEL_DATA));
-      saveState();
-      showToast('초기 엑셀 데이터로 리셋되었습니다.');
-    }
-  });
-
   document.getElementById('btn-copy-summary').addEventListener('click', copySummaryToClipboard);
   document.getElementById('btn-export-json').addEventListener('click', exportBackupJSON);
   
@@ -153,10 +145,6 @@ function setupEventListeners() {
   const importInput = document.getElementById('import-json-input');
   importTrigger.addEventListener('click', () => importInput.click());
   importInput.addEventListener('change', importBackupJSON);
-
-  // Snapshot Button
-  document.getElementById('btn-save-snapshot').addEventListener('click', saveMonthlySnapshot);
-  document.getElementById('btn-save-history-now').addEventListener('click', saveMonthlySnapshot);
 
   // Income Addition Modal Trigger
   document.getElementById('btn-add-income-modal').addEventListener('click', () => openAddIncomeModal());
@@ -191,12 +179,13 @@ function renderAll() {
   remainElem.innerText = formatKRW(calcs.remainingBalance);
   
   if (calcs.remainingBalance < 0) {
-    document.getElementById('kpi-balance-status').innerText = '⚠️ 예산 초과 발생!';
     remainElem.classList.add('text-danger');
   } else {
-    document.getElementById('kpi-balance-status').innerText = '수입 대비 여유자금 잔여';
     remainElem.classList.remove('text-danger');
   }
+
+  document.getElementById('kpi-remain-gyewon').innerText = formatKRW(calcs.remainGyewon);
+  document.getElementById('kpi-remain-dongwook').innerText = formatKRW(calcs.remainDongwook);
 
   document.getElementById('kpi-income-gyewon').innerText = formatCompactKRW(calcs.incomeGyewon);
   document.getElementById('kpi-income-dongwook').innerText = formatCompactKRW(calcs.incomeDongwook);
@@ -234,6 +223,9 @@ function calculateTotals() {
   let allocDongwookSum = appState.allocations.dongwook.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
   const totalAllocations = allocGyewonSum + allocDongwookSum;
 
+  const remainGyewon = incomeGyewon - allocGyewonSum;
+  const remainDongwook = incomeDongwook - allocDongwookSum;
+
   // Fixed Expenses
   const fixedBaseTotal = appState.fixedExpenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
   const fixedActualTotal = appState.fixedExpenses.reduce((acc, curr) => acc + (Number(curr.actualMarch) || 0), 0);
@@ -258,6 +250,8 @@ function calculateTotals() {
     totalIncome,
     allocGyewonSum,
     allocDongwookSum,
+    remainGyewon,
+    remainDongwook,
     totalAllocations,
     fixedExpenseTotal: fixedBaseTotal,
     fixedExpenseActualTotal: fixedActualTotal,
@@ -281,10 +275,13 @@ function renderIncomeTables() {
   appState.incomes.forEach(inc => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><div class="editable-cell" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'title')">${inc.title}</div></td>
-      <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
-      <td><div class="editable-cell" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'note')">${inc.note || '-'}</div></td>
-      <td><button class="btn btn-outline-danger btn-sm" onclick="deleteItem('incomes', '${inc.id}')"><i class="fa-solid fa-trash"></i></button></td>
+      <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'title')">${inc.title}</div></td>
+      <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
+      <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'note')">${inc.note || '-'}</div></td>
+      <td style="white-space:nowrap; text-align:right;">
+        <button class="btn btn-outline-primary btn-sm" title="수입/월급 수정" onclick="openEditIncomeModal('${inc.id}')"><i class="fa-solid fa-pen-to-square"></i> 수정</button>
+        <button class="btn btn-outline-danger btn-sm" title="삭제" onclick="deleteItem('incomes', '${inc.id}')"><i class="fa-solid fa-trash"></i></button>
+      </td>
     `;
 
     if (inc.person === 'gyewon') {
@@ -634,6 +631,50 @@ function openAddIncomeModal() {
     closeModal();
     saveState();
     showToast('새 수입 항목이 추가되었습니다.');
+  };
+}
+
+function openEditIncomeModal(incId) {
+  const inc = appState.incomes.find(i => i.id === incId);
+  if (!inc) return;
+
+  const body = document.getElementById('modal-body');
+  const personName = inc.person === 'gyewon' ? '계원' : '동욱';
+  document.getElementById('modal-title').innerText = `${personName} 수입/월급 수정`;
+
+  body.innerHTML = `
+    <div class="form-group">
+      <label>수입 대상자</label>
+      <select id="modal-inc-person" class="form-select">
+        <option value="gyewon" ${inc.person === 'gyewon' ? 'selected' : ''}>계원</option>
+        <option value="dongwook" ${inc.person === 'dongwook' ? 'selected' : ''}>동욱</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>수입 항목명 (예: 기본급, 보너스, 부수입)</label>
+      <input type="text" id="modal-inc-title" class="form-control" value="${inc.title}">
+    </div>
+    <div class="form-group">
+      <label>수입 / 월급 금액 (원) - 월급 인상/변동 시 수정</label>
+      <input type="number" id="modal-inc-amount" class="form-control" value="${inc.amount}">
+    </div>
+    <div class="form-group">
+      <label>비고</label>
+      <input type="text" id="modal-inc-note" class="form-control" value="${inc.note || ''}">
+    </div>
+  `;
+
+  document.getElementById('item-modal').classList.add('active');
+
+  document.getElementById('modal-save-btn').onclick = () => {
+    inc.person = document.getElementById('modal-inc-person').value;
+    inc.title = document.getElementById('modal-inc-title').value.trim();
+    inc.amount = Number(document.getElementById('modal-inc-amount').value) || 0;
+    inc.note = document.getElementById('modal-inc-note').value.trim();
+
+    closeModal();
+    saveState();
+    showToast('수입/월급 금액이 수정되었습니다.');
   };
 }
 

@@ -52,14 +52,6 @@
       </div>
 
       <div class="sidebar-footer">
-        <div class="action-buttons-stack">
-          <button id="btn-save-snapshot" class="btn btn-secondary btn-sm" title="현재 데이터 추이에 저장">
-            <i class="fa-solid fa-camera"></i> 이달 내역 마감/저장
-          </button>
-          <button id="btn-reset-data" class="btn btn-outline-danger btn-sm" title="초기 엑셀 데이터로 복원">
-            <i class="fa-solid fa-rotate-left"></i> 엑셀 초기값 리셋
-          </button>
-        </div>
         <div class="theme-toggle-wrap">
           <span class="theme-label"><i class="fa-solid fa-moon"></i> 다크 모드</span>
           <label class="switch">
@@ -122,12 +114,13 @@
         <!-- Card 3: Remaining Balance (Surplus) - HIGHLIGHTED -->
         <div class="kpi-card balance-kpi highlight">
           <div class="kpi-header">
-            <span class="kpi-title">남은 잔액 (여유자금)</span>
+            <span class="kpi-title">가구 총 남은 잔액</span>
             <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
           </div>
           <div class="kpi-value" id="kpi-remaining-balance">0 원</div>
-          <div class="kpi-sub">
-            <span id="kpi-balance-status">수입 대비 여유자금 잔여</span>
+          <div class="kpi-sub flex-wrap" style="gap: 6px; margin-top: 4px;">
+            <span class="badge badge-gyewon">계원 잔액: <strong id="kpi-remain-gyewon">0원</strong></span>
+            <span class="badge badge-dongwook">동욱 잔액: <strong id="kpi-remain-dongwook">0원</strong></span>
           </div>
         </div>
 
@@ -435,12 +428,9 @@
         <div class="card-box mb-4">
           <div class="card-box-header">
             <div>
-              <h3><i class="fa-solid fa-clock-rotate-left"></i> 월별 재정 기록 & 마감 관리</h3>
-              <p class="text-muted">매월 재정을 마감하고 이전 달의 기록을 보관하여 지출 변화를 추적합니다.</p>
+              <h3><i class="fa-solid fa-clock-rotate-left"></i> 월별 재정 기록 & 추이</h3>
+              <p class="text-muted">이전 달의 기록을 보관하여 지출 및 수입 변화를 추적합니다.</p>
             </div>
-            <button class="btn btn-primary" id="btn-save-history-now">
-              <i class="fa-solid fa-floppy-disk"></i> 현재 달 기록 마감 저장
-            </button>
           </div>
 
           <div class="table-responsive">
