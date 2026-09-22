@@ -24,7 +24,7 @@ const DEFAULT_EXCEL_DATA = {
       { id: 'ag6', name: '오빠 ISA', amount: 200000, bank: '신한', day: '-', method: '-', schedule: '-', category: '투자/연금' },
       { id: 'ag7', name: '원이 ISA', amount: 400000, bank: '키움', day: '-', method: '-', schedule: '-', category: '투자/연금' },
       { id: 'ag8', name: '케이뱅크', amount: 300000, bank: '코인', day: '22일', method: '자동이체', schedule: '22일 자동이체', category: '투자/연금' },
-      { id: 'ag9', name: '대출금', amount: 1875232, bank: '고정지출', day: '22일', method: '자동이체', schedule: '22일 자동이체', category: '대출금' },
+      { id: 'ag9', name: '대출/이자', amount: 1875232, bank: '고정지출', day: '22일', method: '자동이체', schedule: '22일 자동이체', category: '대출/이자' },
       { id: 'ag10', name: '자율적금', amount: 100000, bank: '', day: '22일', method: '오빠자동이체', schedule: '22일/오빠자동이체', category: '저축/적금' },
       { id: 'ag11', name: 'IRP', amount: 50000, bank: '신한투자증권', day: '15일', method: '회사자동이체(별도)', schedule: '15일회사자동이체(별도)', category: '투자/연금' }
     ],
@@ -94,10 +94,24 @@ function calculateTotals() {
   // Total Expenses
   const totalExpenses = totalAllocations;
 
-  // Savings & Investments (Categories: 저축/적금, 투자/연금)
+  // Savings & Investments
+  const catSavings = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[1] : '저축/적금';
+  const catInvest = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[2] : '투자/연금';
+  const catEmergency = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[4] : '비상금/경조사';
+
   let totalSavings = 0;
+  let pureSavings = 0;
+  let pureInvestment = 0;
+  let pureEmergency = 0;
   [...appState.allocations.gyewon, ...appState.allocations.dongwook].forEach(item => {
-    if (item.category === '저축/적금' || item.category === '투자/연금') {
+    if (item.category === catSavings) {
+      pureSavings += Number(item.amount) || 0;
+      totalSavings += Number(item.amount) || 0;
+    } else if (item.category === catInvest) {
+      pureInvestment += Number(item.amount) || 0;
+      totalSavings += Number(item.amount) || 0;
+    } else if (item.category === catEmergency) {
+      pureEmergency += Number(item.amount) || 0;
       totalSavings += Number(item.amount) || 0;
     }
   });
@@ -119,6 +133,10 @@ function calculateTotals() {
     fixedExpenseActualTotal: fixedActualTotal,
     totalExpenses,
     totalSavings,
+    pureSavings,
+    pureInvestment,
+    pureEmergency,
+    savingsRate,
     remainingBalance,
     savingsRate
   };
@@ -148,9 +166,9 @@ function renderIncomeTables() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="badge ${badgeClass}">${personLabel}</span></td>
-      <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineCategory(this, '${inc.id}', event)"><span class="badge badge-secondary" style="font-weight:600; cursor:pointer;">${categoryName}</span></div></td>
+      <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineCategory(this, '${inc.id}', event)"><span class="badge ${getCategoryBadgeClass(categoryName)}" style="font-weight:600; cursor:pointer;">${categoryName}</span></div></td>
       <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급/금액 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
-      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')">${inc.day || '25일'}</div></td>
+      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')">${(inc.day && inc.day !== '-') ? String(inc.day).replace(/일+$/, '') + '일' : '-'}</div></td>
       <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'note')">${inc.note || '-'}</div></td>
       <td style="white-space:nowrap; text-align:right;">
         <button class="btn btn-outline-primary btn-sm" title="수입/월급 수정" onclick="openEditIncomeModal('${inc.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -175,6 +193,7 @@ if (window.supabase) {
 
 // Application State
 let appState = loadState();
+
 
 // Chart Instances
 let trendChartInstance = null;
@@ -216,8 +235,9 @@ function normalizeAllocationItem(item) {
     }
   }
   if (!item.day) item.day = '-';
+  else item.day = item.day.toString().replace(/일$/, '').trim();
   if (!item.method) item.method = '-';
-  item.schedule = `${item.day === '-' ? '' : item.day} ${item.method === '-' ? '' : item.method}`.trim() || '-';
+  item.schedule = `${item.day === '-' ? '' : item.day + '일'} ${item.method === '-' ? '' : item.method}`.trim() || '-';
   return item;
 }
 
@@ -230,6 +250,34 @@ function normalizeState(state) {
       state.allocations.dongwook.forEach(normalizeAllocationItem);
     }
   }
+  // Migration for 대출금 -> 대출/이자
+  if (state && state.categories && state.categories.allocCategories) {
+    state.categories.allocCategories = state.categories.allocCategories.map(c => c === '대출금' ? '대출/이자' : c);
+  }
+  if (state && state.allocations) {
+    if (state.allocations.gyewon) {
+      state.allocations.gyewon.forEach(item => { if (item.category === '대출금') item.category = '대출/이자'; });
+    }
+    if (state.allocations.dongwook) {
+      state.allocations.dongwook.forEach(item => { if (item.category === '대출금') item.category = '대출/이자'; });
+    }
+  }
+
+  // Sync mismatched categories caused by earlier edits
+  if (state && state.categories && state.categories.allocCategories && state.allocations) {
+    const cats = state.categories.allocCategories;
+    ['gyewon', 'dongwook'].forEach(p => {
+      if (state.allocations[p]) {
+        state.allocations[p].forEach(item => {
+          if (item.category && !cats.includes(item.category)) {
+            const match = cats.find(c => item.category.includes(c) || c.includes(item.category));
+            if (match) item.category = match;
+          }
+        });
+      }
+    });
+  }
+
   return state;
 }
 
@@ -314,19 +362,18 @@ async function syncToSupabase() {
       .from('monthly_budget_data')
       .upsert({
         id: 'main',
-        data: appState,
-        updated_at: new Date().toISOString()
+        data: appState
       });
 
     if (error) {
       console.warn('Supabase save notice:', error.message);
-      updateSupabaseBadge(false, '테이블 생성 필요');
+      updateSupabaseBadge(false, '저장 실패');
     } else {
       updateSupabaseBadge(true);
     }
   } catch (err) {
     console.error('Supabase save error:', err);
-    updateSupabaseBadge(false, '저장 오류');
+    updateSupabaseBadge(false, '연결 오류');
   }
 }
 
@@ -438,7 +485,7 @@ function renderAll() {
 
   const breakdownHTML = Object.entries(incomeByCategory)
     .sort((a, b) => b[1] - a[1]) // Sort descending by amount
-    .map(([cat, amt]) => `<span class="badge badge-info">${cat} ${formatCompactKRW(amt)}</span>`)
+    .map(([cat, amt]) => `<span class="badge ${getCategoryBadgeClass(cat)}">${cat} ${formatCompactKRW(amt)}</span>`)
     .join(' ');
   
   const breakdownElem = document.getElementById('kpi-income-breakdown');
@@ -446,7 +493,25 @@ function renderAll() {
     breakdownElem.innerHTML = breakdownHTML;
   }
   document.getElementById('kpi-fixed-total').innerText = formatKRW(calcs.fixedExpenseTotal);
-  document.getElementById('kpi-total-savings').innerText = formatKRW(calcs.totalSavings);
+  document.getElementById('kpi-fixed-total').innerText = formatKRW(calcs.fixedExpenseTotal);
+  
+  const pSavingsElem = document.getElementById('kpi-pure-savings');
+  const pInvestElem = document.getElementById('kpi-pure-investment');
+  const pEmergencyElem = document.getElementById('kpi-pure-emergency');
+  const pTotalElem = document.getElementById('kpi-total-savings');
+  const pLabelSavings = document.getElementById('kpi-label-savings');
+  const pLabelInvest = document.getElementById('kpi-label-invest');
+  const pLabelEmergency = document.getElementById('kpi-label-emergency');
+
+  if (pSavingsElem) pSavingsElem.innerText = formatKRW(calcs.pureSavings);
+  if (pInvestElem) pInvestElem.innerText = formatKRW(calcs.pureInvestment);
+  if (pEmergencyElem) pEmergencyElem.innerText = formatKRW(calcs.pureEmergency);
+  if (pTotalElem) pTotalElem.innerText = formatKRW(calcs.totalSavings);
+
+  if (pLabelSavings) pLabelSavings.innerText = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[1] : '저축';
+  if (pLabelInvest) pLabelInvest.innerText = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[2] : '투자';
+  if (pLabelEmergency) pLabelEmergency.innerText = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[4] : '비상금';
+  
   document.getElementById('kpi-savings-rate').innerText = `${calcs.savingsRate}%`;
 
   // Render Tables
@@ -462,16 +527,17 @@ function renderAll() {
   renderCharts();
 }
 
-function getAllocCategoryBadgeClass(category) {
-  switch(category) {
-    case '생활비': return 'badge-info';
-    case '저축/적금': return 'badge-success';
-    case '투자/연금': return 'badge-primary';
-    case '대출금': return 'badge-danger';
-    case '비상금/경조사': return 'badge-warning';
-    default: return 'badge-secondary';
-  }
+function getCategoryBadgeClass(category) {
+  if (!category) return 'badge-secondary';
+  if (category.includes('생활비')) return 'badge-info';
+  if (category.includes('급여') || category.includes('기본급')) return 'badge-salary';
+  if (category.includes('저축') || category.includes('적금')) return 'badge-success';
+  if (category.includes('투자') || category.includes('연금') || category.includes('배당')) return 'badge-primary';
+  if (category.includes('대출')) return 'badge-danger';
+  if (category.includes('비상금') || category.includes('경조사') || category.includes('보너스') || category.includes('상여') || category.includes('인센티브')) return 'badge-warning';
+  return 'badge-secondary';
 }
+window.getAllocCategoryBadgeClass = getCategoryBadgeClass; // For backward compatibility with any other calls
 
 // Render Allocations Tables
 function renderAllocationTables() {
@@ -524,7 +590,8 @@ function renderAllocationTables() {
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'name')">${item.name}</div></td>
         <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
-        <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'day')">${item.day || '-'}</div></td>
+        <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'deposit')">${item.deposit || '-'}</div></td>
+        <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
         <td style="text-align:center;">
           <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
                  ${(item.isAutoTransfer === true || (item.isAutoTransfer === undefined && item.method && item.method.includes('자동'))) ? 'checked' : ''} 
@@ -548,7 +615,8 @@ function renderAllocationTables() {
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'name')">${item.name}</div></td>
         <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
-        <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'day')">${item.day || '-'}</div></td>
+        <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'deposit')">${item.deposit || '-'}</div></td>
+        <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
         <td style="text-align:center;">
           <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
                  ${(item.isAutoTransfer === true || (item.isAutoTransfer === undefined && item.method && item.method.includes('자동'))) ? 'checked' : ''} 
@@ -605,7 +673,7 @@ function renderFixedExpensesTable() {
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'name')">${item.name}</div></td>
       <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
       <td><div class="editable-cell cell-amount text-accent" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'actualMarch', 'number')">${formatKRW(item.actualMarch)}</div></td>
-      <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'day')">${item.day || '-'}</div></td>
+      <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'method')">${item.method || '-'}</div></td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'category')">${item.category || '-'}</div></td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'note')">${item.note || '-'}</div></td>
@@ -767,21 +835,52 @@ function renderCategoryAllocationSummary() {
     totalAlloc += amt;
   });
 
+  const calcs = calculateTotals();
+  const baseIncome = calcs.totalIncome > 0 ? calcs.totalIncome : 1;
+
   const sortedCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
 
   sortedCats.forEach(([cat, amt]) => {
     const badgeClass = getAllocCategoryBadgeClass(cat);
-    const pct = totalAlloc > 0 ? ((amt / totalAlloc) * 100).toFixed(1) : 0;
+    const pct = ((amt / baseIncome) * 100).toFixed(1);
     
     const card = document.createElement('div');
     card.className = 'pm-card';
     card.innerHTML = `
       <div class="pm-name"><span class="badge ${badgeClass}">${cat}</span></div>
       <div class="pm-amount" style="margin-top:4px;">${formatKRW(amt)}</div>
-      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${pct}% (${formatCompactKRW(amt)})</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 수입 대비 ${pct}%</div>
     `;
     container.appendChild(card);
   });
+
+  // Add Total Sum Card
+  if (totalAlloc > 0) {
+    const allocPct = ((totalAlloc / baseIncome) * 100).toFixed(1);
+    const totalCard = document.createElement('div');
+    totalCard.className = 'pm-card';
+    totalCard.style.border = '1px solid var(--accent-primary)';
+    totalCard.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
+    totalCard.innerHTML = `
+      <div class="pm-name"><span class="badge badge-primary" style="font-weight: bold;">총 합계</span></div>
+      <div class="pm-amount" style="margin-top:4px; color: var(--text-main); font-weight: 700;">${formatKRW(totalAlloc)}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 수입 대비 ${allocPct}%</div>
+    `;
+    container.appendChild(totalCard);
+  }
+
+  // Add Remaining Balance Card
+  const remainPct = ((calcs.remainingBalance / baseIncome) * 100).toFixed(1);
+  const remainCard = document.createElement('div');
+  remainCard.className = 'pm-card';
+  remainCard.style.border = '1px solid var(--accent-success)';
+  remainCard.style.backgroundColor = 'rgba(16, 185, 129, 0.05)';
+  remainCard.innerHTML = `
+    <div class="pm-name"><span class="badge badge-success" style="font-weight: bold;">남은 잔액</span></div>
+    <div class="pm-amount" style="margin-top:4px; color: ${calcs.remainingBalance < 0 ? 'var(--accent-danger)' : 'var(--accent-success)'}; font-weight: 700;">${formatKRW(calcs.remainingBalance)}</div>
+    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 수입 대비 ${remainPct}%</div>
+  `;
+  container.appendChild(remainCard);
 }
 
 // Render Monthly History Table
@@ -810,17 +909,7 @@ function renderHistoryTable() {
 
 function formatDayInput(val) {
   if (!val) return '';
-  val = String(val).trim();
-  // Pure numbers like "25" -> "25일"
-  if (/^\d+$/.test(val)) {
-    return val + '일';
-  }
-  // Slash numbers like "2/26" -> "2일/26일"
-  if (/^\d+\/\d+$/.test(val)) {
-    const parts = val.split('/');
-    return `${parts[0]}일/${parts[1]}일`;
-  }
-  return val;
+  return String(val).trim().replace(/일+$/, '');
 }
 
 // Direct Inline Cell Editor
@@ -831,9 +920,29 @@ function editInlineCell(element, pathStr, itemId, fieldName, type = 'text') {
   const originalVal = currVal;
 
   const input = document.createElement('input');
-  input.type = type === 'number' ? 'number' : 'text';
+  input.type = 'text'; // Always use text to allow commas
   input.className = 'cell-input';
-  input.value = currVal;
+
+  if (type === 'number') {
+    // Format initial value with commas
+    input.value = Number(currVal) ? Number(currVal).toLocaleString('ko-KR') : (currVal === 0 ? '0' : '');
+    // Format dynamically as user types
+    input.addEventListener('input', (e) => {
+      let raw = e.target.value.replace(/[^0-9-]/g, '');
+      if (raw) {
+        // Handle negative sign correctly
+        if (raw === '-') {
+          e.target.value = '-';
+        } else {
+          e.target.value = Number(raw).toLocaleString('ko-KR');
+        }
+      } else {
+        e.target.value = '';
+      }
+    });
+  } else {
+    input.value = currVal;
+  }
 
   element.innerHTML = '';
   element.appendChild(input);
@@ -842,7 +951,7 @@ function editInlineCell(element, pathStr, itemId, fieldName, type = 'text') {
   const finishEdit = () => {
     let newVal = input.value.trim();
     if (type === 'number') {
-      newVal = Number(newVal) || 0;
+      newVal = Number(newVal.replace(/[^0-9-]/g, '')) || 0;
     } else if (fieldName === 'day' || fieldName === 'schedule') {
       newVal = formatDayInput(newVal);
     }
@@ -914,6 +1023,13 @@ window.toggleAllocAutoTransfer = function(pathStr, itemId) {
     } else if (item.method) {
       currentlyAuto = item.method.includes('자동');
     }
+
+    const actionText = currentlyAuto ? '해제' : '설정';
+    if (!confirm(`해당 항목의 자동이체를 ${actionText}하시겠습니까?`)) {
+      renderAll(); // Revert visual state
+      return;
+    }
+
     item.isAutoTransfer = !currentlyAuto;
     if (!item.isAutoTransfer && item.method && item.method.includes('자동')) {
       item.method = '';
@@ -923,6 +1039,32 @@ window.toggleAllocAutoTransfer = function(pathStr, itemId) {
     saveState();
     renderAll();
   }
+};
+
+window.sortAllocations = function(person, field) {
+  if (!appState.allocations[person]) return;
+  
+  if (!window.sortState) window.sortState = {};
+  if (!window.sortState[person]) window.sortState[person] = { field: null, asc: true };
+  
+  const state = window.sortState[person];
+  if (state.field === field) {
+    state.asc = !state.asc; // Toggle sort direction
+  } else {
+    state.field = field;
+    state.asc = true;
+  }
+  
+  appState.allocations[person].sort((a, b) => {
+    let valA = a[field] || '';
+    let valB = b[field] || '';
+    if (valA < valB) return state.asc ? -1 : 1;
+    if (valA > valB) return state.asc ? 1 : -1;
+    return 0;
+  });
+  
+  saveState();
+  renderAllocationTables();
 };
 
 function toggleFixedPaid(itemId, isPaid) {
@@ -1004,11 +1146,11 @@ function openCategoryManagerModal(mode) {
     appState.categories = {
       recipients: ['계원', '동욱', '공통 / 가구'],
       incomeItems: ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입'],
-      allocCategories: ['생활비', '저축/적금', '투자/연금', '대출금', '비상금/경조사']
+      allocCategories: ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사']
     };
   }
   if (!appState.categories.allocCategories) {
-    appState.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출금', '비상금/경조사'];
+    appState.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
   }
 
   const renderCatLists = () => {
@@ -1162,10 +1304,48 @@ window.addIncomeItemCategory = function() {
   }
 };
 
-window.deleteIncomeItemCategory = function(idx) {
+
+
+window.addAllocCategory = function() {
+  const input = document.getElementById('new-alloc-cat-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val) {
+    if (!appState.categories.allocCategories.includes(val)) {
+      appState.categories.allocCategories.push(val);
+      saveState();
+      openCategoryManagerModal();
+      renderAllocationTables();
+    }
+  }
+};
+
+window.editAllocCategory = function(idx) {
+  const oldVal = appState.categories.allocCategories[idx];
+  const newVal = prompt('새 배분 카테고리명을 입력하세요:', oldVal);
+  if (newVal && newVal.trim() !== '') {
+    const trimmed = newVal.trim();
+    appState.categories.allocCategories[idx] = trimmed;
+    ['gyewon', 'dongwook'].forEach(person => {
+      (appState.allocations[person] || []).forEach(item => {
+        if (item.category === oldVal) item.category = trimmed;
+      });
+    });
+    saveState();
+    openCategoryManagerModal();
+    renderAllocationTables();
+  }
+};
+
+window.deleteAllocCategory = function(idx) {
+  if (appState.categories.allocCategories.length <= 1) {
+    alert('최소 1개 이상의 배분 항목이 필요합니다.');
+    return;
+  }
+  appState.categories.allocCategories.splice(idx, 1);
   saveState();
   openCategoryManagerModal();
-  renderIncomeTables();
+  renderAllocationTables();
 };
 
 // Mobile & Web Touch-Friendly Category Picker Modal
@@ -1266,7 +1446,7 @@ window.editInlineAllocCategory = function(element, pathStr, itemId, evt) {
 
   if (!appState.categories) appState.categories = {};
   if (!appState.categories.allocCategories) {
-    appState.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출금', '비상금/경조사'];
+    appState.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
   }
   const catList = appState.categories.allocCategories;
 
@@ -1432,7 +1612,7 @@ function openAddAllocModal(personKey) {
   const personName = personKey === 'gyewon' ? '계원' : '동욱';
   document.getElementById('modal-title').innerText = `${personName} 배분 항목 추가`;
 
-  const allocCatList = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories : ['생활비', '저축/적금', '투자/연금', '대출금', '비상금/경조사'];
+  const allocCatList = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories : ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
   const allocCatOptions = allocCatList.map(cat => `<option value="${cat}">${cat}</option>`).join('');
 
   body.innerHTML = `
@@ -1445,8 +1625,12 @@ function openAddAllocModal(personKey) {
       <input type="number" id="modal-alloc-amount" class="form-control" placeholder="0">
     </div>
     <div class="form-group">
-      <label>은행 / 기관명</label>
-      <input type="text" id="modal-alloc-bank" class="form-control" placeholder="예: 신한, 국민, 키움">
+      <label>출금</label>
+      <input type="text" id="modal-alloc-bank" class="form-control" placeholder="예: 신한, 국민">
+    </div>
+    <div class="form-group">
+      <label>입금</label>
+      <input type="text" id="modal-alloc-deposit" class="form-control" placeholder="예: 국민, 키움">
     </div>
     <div class="form-group">
       <label>이체일자</label>
@@ -1470,6 +1654,7 @@ function openAddAllocModal(personKey) {
     const name = document.getElementById('modal-alloc-name').value.trim();
     const amount = Number(document.getElementById('modal-alloc-amount').value) || 0;
     const bank = document.getElementById('modal-alloc-bank').value.trim();
+    const deposit = document.getElementById('modal-alloc-deposit').value.trim();
     let day = document.getElementById('modal-alloc-day').value.trim();
     const isAutoTransfer = document.getElementById('modal-alloc-isAutoTransfer').checked;
     const category = document.getElementById('modal-alloc-category').value;
@@ -1486,6 +1671,7 @@ function openAddAllocModal(personKey) {
       name,
       amount,
       bank,
+      deposit,
       day: dayVal,
       method: methodVal,
       isAutoTransfer,
@@ -1663,15 +1849,32 @@ function renderCharts() {
       catMap[cat] = (catMap[cat] || 0) + Number(item.amount || 0);
     });
 
+    const labels = Object.keys(catMap);
+    const dataValues = Object.values(catMap);
+    
+    const bgColors = labels.map(cat => {
+      const badgeClass = getAllocCategoryBadgeClass(cat);
+      switch(badgeClass) {
+        case 'badge-info': return '#06b6d4';
+        case 'badge-success': return '#10b981';
+        case 'badge-primary': return '#6366f1';
+        case 'badge-warning': return '#f59e0b';
+        case 'badge-danger': return '#ef4444';
+        case 'badge-salary': return '#ec4899';
+        case 'badge-secondary': 
+        default: return '#94a3b8';
+      }
+    });
+
     if (categoryChartInstance) categoryChartInstance.destroy();
 
     categoryChartInstance = new Chart(pieCtx, {
       type: 'doughnut',
       data: {
-        labels: Object.keys(catMap),
+        labels: labels,
         datasets: [{
-          data: Object.values(catMap),
-          backgroundColor: ['#6366f1', '#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'],
+          data: dataValues,
+          backgroundColor: bgColors,
           borderWidth: 0
         }]
       },

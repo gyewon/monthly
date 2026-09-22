@@ -126,11 +126,29 @@
         <!-- Card 4: Total Savings & Investments -->
         <div class="kpi-card savings-kpi">
           <div class="kpi-header">
-            <span class="kpi-title">총 저축 / 적금 / 투자</span>
+            <span class="kpi-title">저축 및 투자 현황</span>
             <div class="kpi-icon"><i class="fa-solid fa-piggy-bank"></i></div>
           </div>
-          <div class="kpi-value" id="kpi-total-savings">0 원</div>
-          <div class="kpi-sub">
+          <div class="kpi-value" style="font-size: 1.15rem; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span id="kpi-label-savings" style="font-size: 0.95rem; color: var(--text-muted);">저축</span>
+              <strong id="kpi-pure-savings" style="color: var(--text-main);">0 원</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span id="kpi-label-invest" style="font-size: 0.95rem; color: var(--text-muted);">투자</span>
+              <strong id="kpi-pure-investment" style="color: var(--text-main);">0 원</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span id="kpi-label-emergency" style="font-size: 0.95rem; color: var(--text-muted);">비상금</span>
+              <strong id="kpi-pure-emergency" style="color: var(--text-main);">0 원</strong>
+            </div>
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 4px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: bold;">총 합계</span>
+              <strong id="kpi-total-savings" style="color: var(--text-main); font-size: 1.15rem;">0 원</strong>
+            </div>
+          </div>
+          <div class="kpi-sub" style="border-top: 1px solid var(--border-color); padding-top: 10px;">
             <span>총 수입 대비 저축률 <strong id="kpi-savings-rate">0%</strong></span>
           </div>
         </div>
@@ -256,10 +274,11 @@
                   <tr>
                     <th>항목명</th>
                     <th>금액 (원)</th>
-                    <th>은행/처</th>
+                    <th>출금</th>
+                    <th>입금</th>
                     <th>이체일자</th>
                     <th>자동이체</th>
-                    <th>카테고리</th>
+                    <th style="cursor:pointer;" onclick="sortAllocations('gyewon', 'category')" title="카테고리 기준으로 정렬">카테고리 <i class="fa-solid fa-sort"></i></th>
                     <th style="width:40px;"></th>
                   </tr>
                 </thead>
@@ -292,10 +311,11 @@
                   <tr>
                     <th>항목명</th>
                     <th>금액 (원)</th>
-                    <th>은행/처</th>
+                    <th>출금</th>
+                    <th>입금</th>
                     <th>이체일자</th>
                     <th>자동이체</th>
-                    <th>카테고리</th>
+                    <th style="cursor:pointer;" onclick="sortAllocations('dongwook', 'category')" title="카테고리 기준으로 정렬">카테고리 <i class="fa-solid fa-sort"></i></th>
                     <th style="width:40px;"></th>
                   </tr>
                 </thead>
@@ -453,6 +473,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>
