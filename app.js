@@ -520,6 +520,7 @@ function renderAll() {
   renderFixedExpensesTable();
   renderTimeline();
   renderPaymentMethodSummary();
+  renderCategoryAllocationSummary();
   renderHistoryTable();
 
   // Render Charts
@@ -817,6 +818,40 @@ function renderPaymentMethodSummary() {
     card.innerHTML = `
       <div class="pm-name">${pm}</div>
       <div class="pm-amount">${formatKRW(amt)}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// Render Category Allocation Summary Cards on Dashboard
+function renderCategoryAllocationSummary() {
+  const container = document.getElementById('category-allocation-summary');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const catMap = {};
+  let totalAlloc = 0;
+  const allAllocations = [...(appState.allocations?.gyewon || []), ...(appState.allocations?.dongwook || [])];
+  
+  allAllocations.forEach(item => {
+    const cat = item.category || '기타';
+    const amt = Number(item.amount || 0);
+    catMap[cat] = (catMap[cat] || 0) + amt;
+    totalAlloc += amt;
+  });
+
+  const sortedCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+
+  sortedCats.forEach(([cat, amt]) => {
+    const badgeClass = getAllocCategoryBadgeClass(cat);
+    const pct = totalAlloc > 0 ? ((amt / totalAlloc) * 100).toFixed(1) : 0;
+    
+    const card = document.createElement('div');
+    card.className = 'pm-card';
+    card.innerHTML = `
+      <div class="pm-name"><span class="badge ${badgeClass}">${cat}</span></div>
+      <div class="pm-amount" style="margin-top:4px;">${formatKRW(amt)}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${pct}% (${formatCompactKRW(amt)})</div>
     `;
     container.appendChild(card);
   });
@@ -1655,7 +1690,7 @@ function renderCharts() {
   const pieCtx = document.getElementById('categoryPieChart');
   if (pieCtx) {
     const catMap = {};
-    [...appState.allocations.gyewon, ...appState.allocations.dongwook].forEach(item => {
+    [...(appState.allocations?.gyewon || []), ...(appState.allocations?.dongwook || [])].forEach(item => {
       const cat = item.category || '기타';
       catMap[cat] = (catMap[cat] || 0) + Number(item.amount || 0);
     });
