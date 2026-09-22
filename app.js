@@ -170,7 +170,7 @@ function renderIncomeTables() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="badge ${badgeClass}">${personLabel}</span></td>
-      <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineCategory(this, '${inc.id}')"><span class="badge badge-secondary" style="font-weight:600; cursor:pointer;">${categoryName}</span></div></td>
+      <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineCategory(this, '${inc.id}', event)"><span class="badge badge-secondary" style="font-weight:600; cursor:pointer;">${categoryName}</span></div></td>
       <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'title')">${inc.title}</div></td>
       <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급/금액 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
       <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')"><i class="fa-regular fa-calendar-check"></i> ${inc.day || '25일'}</div></td>
@@ -606,7 +606,7 @@ function getAllocCategoryBadgeClass(category) {
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
         <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'day')">${item.day || '-'}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'method')">${item.method || '-'}</div></td>
-        <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineAllocCategory(this, 'allocations.gyewon', '${item.id}')"><span class="badge ${catBadge}" style="font-weight:600; cursor:pointer;">${item.category || '기타'}</span></div></td>
+        <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineAllocCategory(this, 'allocations.gyewon', '${item.id}', event)"><span class="badge ${catBadge}" style="font-weight:600; cursor:pointer;">${item.category || '기타'}</span></div></td>
         <td><button class="btn btn-outline-danger btn-sm" onclick="deleteItem('allocations.gyewon', '${item.id}')"><i class="fa-solid fa-xmark"></i></button></td>
       `;
       tbodyG.appendChild(tr);
@@ -626,7 +626,7 @@ function getAllocCategoryBadgeClass(category) {
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
         <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'day')">${item.day || '-'}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'method')">${item.method || '-'}</div></td>
-        <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineAllocCategory(this, 'allocations.dongwook', '${item.id}')"><span class="badge ${catBadge}" style="font-weight:600; cursor:pointer;">${item.category || '기타'}</span></div></td>
+        <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineAllocCategory(this, 'allocations.dongwook', '${item.id}', event)"><span class="badge ${catBadge}" style="font-weight:600; cursor:pointer;">${item.category || '기타'}</span></div></td>
         <td><button class="btn btn-outline-danger btn-sm" onclick="deleteItem('allocations.dongwook', '${item.id}')"><i class="fa-solid fa-xmark"></i></button></td>
       `;
       tbodyD.appendChild(tr);
@@ -1162,14 +1162,20 @@ window.deleteIncomeItemCategory = function(idx) {
   renderIncomeTables();
 };
 
-window.editInlineCategory = function(element, incId) {
-  const inc = appState.incomes.find(i => i.id === incId);
+window.editInlineCategory = function(element, incId, evt) {
+  if (evt) evt.stopPropagation();
+  if (element.querySelector('select')) return;
+
+  const inc = (appState.incomes || []).find(i => i.id === incId);
   if (!inc) return;
 
   const itemCatList = (appState.categories && appState.categories.incomeItems) ? appState.categories.incomeItems : ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입'];
 
   const select = document.createElement('select');
   select.className = 'form-select form-select-sm';
+  select.style.width = '100%';
+  select.style.minWidth = '110px';
+
   itemCatList.forEach(cat => {
     const opt = document.createElement('option');
     opt.value = cat;
@@ -1184,35 +1190,50 @@ window.editInlineCategory = function(element, incId) {
 
   element.innerHTML = '';
   element.appendChild(select);
-  select.focus();
 
-  const finishEdit = () => {
-    const val = select.value;
+  let committed = false;
+  const commitChange = (val) => {
+    if (committed) return;
+    committed = true;
     if (val === 'NEW_CUSTOM') {
-      const newCat = prompt('새 수입 항목 카테고리명을 입력하세요:');
-      if (newCat && newCat.trim()) {
-        const trimmed = newCat.trim();
-        if (!appState.categories.incomeItems.includes(trimmed)) {
-          appState.categories.incomeItems.push(trimmed);
+      setTimeout(() => {
+        const newCat = prompt('새 수입 항목 카테고리명을 입력하세요:');
+        if (newCat && newCat.trim()) {
+          const trimmed = newCat.trim();
+          if (!appState.categories.incomeItems.includes(trimmed)) {
+            appState.categories.incomeItems.push(trimmed);
+          }
+          inc.category = trimmed;
         }
-        inc.category = trimmed;
-      }
+        saveState();
+        renderIncomeTables();
+      }, 50);
     } else {
-      inc.category = val;
+      if (val) inc.category = val;
+      saveState();
+      renderIncomeTables();
     }
-    saveState();
-    renderIncomeTables();
   };
 
-  select.onchange = finishEdit;
-  select.onblur = finishEdit;
+  select.onchange = (e) => commitChange(e.target.value);
+  select.onblur = (e) => {
+    if (select.value !== 'NEW_CUSTOM') {
+      commitChange(select.value);
+    }
+  };
+
+  setTimeout(() => select.focus(), 20);
 };
 
-window.editInlineAllocCategory = function(element, pathStr, itemId) {
+window.editInlineAllocCategory = function(element, pathStr, itemId, evt) {
+  if (evt) evt.stopPropagation();
+  if (element.querySelector('select')) return;
+
   const list = resolvePath(pathStr);
   const item = list.find(i => i.id === itemId);
   if (!item) return;
 
+  if (!appState.categories) appState.categories = {};
   if (!appState.categories.allocCategories) {
     appState.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출금', '비상금/경조사'];
   }
@@ -1220,6 +1241,9 @@ window.editInlineAllocCategory = function(element, pathStr, itemId) {
 
   const select = document.createElement('select');
   select.className = 'form-select form-select-sm';
+  select.style.width = '100%';
+  select.style.minWidth = '110px';
+
   catList.forEach(cat => {
     const opt = document.createElement('option');
     opt.value = cat;
@@ -1234,30 +1258,39 @@ window.editInlineAllocCategory = function(element, pathStr, itemId) {
 
   element.innerHTML = '';
   element.appendChild(select);
-  select.focus();
 
-  let finished = false;
-  const finishEdit = () => {
-    if (finished) return;
-    finished = true;
-    const val = select.value;
+  let committed = false;
+  const commitChange = (val) => {
+    if (committed) return;
+    committed = true;
     if (val === 'NEW_CUSTOM') {
-      const newCat = prompt('새 배분 카테고리명을 입력하세요:');
-      if (newCat && newCat.trim()) {
-        const trimmed = newCat.trim();
-        if (!appState.categories.allocCategories.includes(trimmed)) {
-          appState.categories.allocCategories.push(trimmed);
+      setTimeout(() => {
+        const newCat = prompt('새 배분 카테고리명을 입력하세요:');
+        if (newCat && newCat.trim()) {
+          const trimmed = newCat.trim();
+          if (!appState.categories.allocCategories.includes(trimmed)) {
+            appState.categories.allocCategories.push(trimmed);
+          }
+          item.category = trimmed;
         }
-        item.category = trimmed;
-      }
+        saveState();
+        renderAllocationTables();
+      }, 50);
     } else {
-      item.category = val;
+      if (val) item.category = val;
+      saveState();
+      renderAllocationTables();
     }
-    saveState();
   };
 
-  select.onchange = finishEdit;
-  select.onblur = finishEdit;
+  select.onchange = (e) => commitChange(e.target.value);
+  select.onblur = (e) => {
+    if (select.value !== 'NEW_CUSTOM') {
+      commitChange(select.value);
+    }
+  };
+
+  setTimeout(() => select.focus(), 20);
 };
 
 function openAddIncomeModal() {
