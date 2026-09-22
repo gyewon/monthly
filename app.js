@@ -89,7 +89,7 @@ function calculateTotals() {
 
   // Fixed Expenses
   const fixedBaseTotal = appState.fixedExpenses.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-  const fixedActualTotal = appState.fixedExpenses.reduce((acc, curr) => acc + (Number(curr.actualMarch) || 0), 0);
+  const fixedActualTotal = fixedBaseTotal; // Unified with amount as requested
 
   // Total Expenses
   const totalExpenses = totalAllocations;
@@ -199,6 +199,7 @@ let appState = loadState();
 let trendChartInstance = null;
 let categoryChartInstance = null;
 let paymentChartInstance = null;
+let fixedCategoryChartInstance = null;
 
 // DOM Loaded Initialization
 document.addEventListener('DOMContentLoaded', () => {
@@ -449,6 +450,7 @@ function setupEventListeners() {
   document.getElementById('filter-category').addEventListener('change', renderFixedExpensesTable);
   document.getElementById('filter-paid').addEventListener('change', renderFixedExpensesTable);
   document.getElementById('search-fixed-expense').addEventListener('input', renderFixedExpensesTable);
+  updateMethodFilterDropdown();
 
   // Modal Close
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
@@ -492,8 +494,12 @@ function renderAll() {
   if (breakdownElem) {
     breakdownElem.innerHTML = breakdownHTML;
   }
-  document.getElementById('kpi-fixed-total').innerText = formatKRW(calcs.fixedExpenseTotal);
-  document.getElementById('kpi-fixed-total').innerText = formatKRW(calcs.fixedExpenseTotal);
+  document.getElementById('kpi-fixed-total').innerText = formatKRW(calcs.fixedExpenseActualTotal) + '원';
+  const variableTotal = calcs.totalExpenses - calcs.fixedExpenseActualTotal;
+  const varElem = document.getElementById('kpi-variable-total');
+  if (varElem) {
+    varElem.innerText = formatKRW(variableTotal) + '원';
+  }
   
   const pSavingsElem = document.getElementById('kpi-pure-savings');
   const pInvestElem = document.getElementById('kpi-pure-investment');
@@ -520,6 +526,7 @@ function renderAll() {
   renderFixedExpensesTable();
   renderTimeline();
   renderPaymentMethodSummary();
+  renderFixedCategorySummary();
   renderCategoryAllocationSummary();
   renderHistoryTable();
 
@@ -532,10 +539,41 @@ function getCategoryBadgeClass(category) {
   if (category.includes('생활비')) return 'badge-info';
   if (category.includes('급여') || category.includes('기본급')) return 'badge-salary';
   if (category.includes('저축') || category.includes('적금')) return 'badge-success';
+  if (category.includes('잔액')) return 'badge-remain';
   if (category.includes('투자') || category.includes('연금') || category.includes('배당')) return 'badge-primary';
   if (category.includes('대출')) return 'badge-danger';
   if (category.includes('비상금') || category.includes('경조사') || category.includes('보너스') || category.includes('상여') || category.includes('인센티브')) return 'badge-warning';
   return 'badge-secondary';
+}
+
+function getPaymentMethodHTML(method) {
+  if (!method || method === '-') return '<span class="text-muted">-</span>';
+  let icon = 'fa-solid fa-credit-card';
+  let color = '#94a3b8'; // gray
+
+  if (method.includes('현금')) { icon = 'fa-solid fa-money-bill-wave'; color = '#10b981'; }
+  else if (method.includes('하나')) { icon = 'fa-regular fa-credit-card'; color = '#06b6d4'; }
+  else if (method.includes('우리')) { icon = 'fa-regular fa-credit-card'; color = '#3b82f6'; }
+  else if (method.includes('신한')) { icon = 'fa-regular fa-credit-card'; color = '#818cf8'; }
+  else if (method.includes('삼성') || method.includes('오빠')) { icon = 'fa-regular fa-credit-card'; color = '#60a5fa'; }
+  else if (method.includes('자동이체') || method.includes('계좌')) { icon = 'fa-solid fa-building-columns'; color = '#c084fc'; }
+  
+  return `<span style="display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:13px; color:#f8fafc; cursor:pointer;"><i class="${icon}" style="color:${color}; font-size:15px;"></i> ${method}</span>`;
+}
+
+function getFixedCategoryHTML(category) {
+  if (!category || category === '-') return '<span class="text-muted">-</span>';
+  let emoji = '\ud83c\udff7\ufe0f';
+  
+  if (category.includes('\uc6a9\ub3c8')) emoji = '\ud83d\udc5b';
+  else if (category.includes('\uacb0\ub3c8') || category.includes('\uacb0')) emoji = '\ud83d\udc65';
+  else if (category.includes('\uad6c\ub3c5')) emoji = '\u25b6\ufe0f';
+  else if (category.includes('\ubcf4\ud5d8')) emoji = '\ud83d\udee1\ufe0f';
+  else if (category.includes('\ud578\ub4dc\ud3f0') || category.includes('\ud1b5\uc2e0')) emoji = '\ud83d\udcf1';
+  else if (category.includes('\uc8fc\uac70') || category.includes('\uad00\ub9ac\ube44')) emoji = '\ud83c\udfe0';
+  else if (category.includes('\uad50\ud1b5')) emoji = '\ud83d\ude8c';
+
+  return `<span style="display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:13px; color:#f8fafc; background-color:rgba(255,255,255,0.08); padding:5px 12px; border-radius:12px; cursor:pointer;"><span style="font-size:17px;">${emoji}</span> ${category}</span>`;
 }
 window.getAllocCategoryBadgeClass = getCategoryBadgeClass; // For backward compatibility with any other calls
 
@@ -665,6 +703,8 @@ function renderFixedExpensesTable() {
     actualSum += Number(item.actualMarch) || 0;
     if (item.isPaid) paidCount++;
 
+    const methodHTML = getPaymentMethodHTML(item.method);
+    const fCatHTML = getFixedCategoryHTML(item.category);
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="text-align:center;">
@@ -672,10 +712,9 @@ function renderFixedExpensesTable() {
       </td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'name')">${item.name}</div></td>
       <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
-      <td><div class="editable-cell cell-amount text-accent" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'actualMarch', 'number')">${formatKRW(item.actualMarch)}</div></td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
-      <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'method')">${item.method || '-'}</div></td>
-      <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'category')">${item.category || '-'}</div></td>
+      <td onclick="editFixedExpenseMethod(this, '${item.id}')" style="cursor:pointer; vertical-align:middle;">${methodHTML}</td>
+      <td onclick="editFixedExpenseCategory(this, '${item.id}')" style="cursor:pointer; vertical-align:middle;">${fCatHTML}</td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'note')">${item.note || '-'}</div></td>
       <td><button class="btn btn-outline-danger btn-sm" onclick="deleteItem('fixedExpenses', '${item.id}')"><i class="fa-solid fa-trash"></i></button></td>
     `;
@@ -683,7 +722,24 @@ function renderFixedExpensesTable() {
   });
 
   document.getElementById('fixed-stat-base').innerText = formatKRW(baseSum);
-  document.getElementById('fixed-stat-actual').innerText = formatKRW(actualSum);
+
+  // Calculate 생활비 budget from allocations
+  const allAllocs = [...(appState.allocations?.gyewon || []), ...(appState.allocations?.dongwook || [])];
+  const livingBudget = allAllocs
+    .filter(item => (item.category || '').includes('생활비'))
+    .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+  const livingRemaining = livingBudget - baseSum;
+
+  const livingBudgetElem = document.getElementById('fixed-stat-living-budget');
+  if (livingBudgetElem) livingBudgetElem.innerText = formatKRW(livingBudget);
+
+  const livingRemainElem = document.getElementById('fixed-stat-remaining');
+  if (livingRemainElem) {
+    livingRemainElem.innerText = formatKRW(livingRemaining);
+    livingRemainElem.className = `value ${livingRemaining < 0 ? 'text-danger' : 'text-success'}`;
+  }
+
   const totalCount = filtered.length;
   const pct = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
   document.getElementById('fixed-stat-completion').innerText = `${paidCount} / ${totalCount} (${pct}%)`;
@@ -750,7 +806,7 @@ function renderTimeline() {
       type: 'FIXED',
       name: item.name,
       method: item.method || '카드',
-      amount: Number(item.actualMarch || item.amount) || 0
+      amount: Number(item.amount) || 0
     });
   });
 
@@ -804,7 +860,7 @@ function renderPaymentMethodSummary() {
   const pmMap = {};
   appState.fixedExpenses.forEach(item => {
     const method = item.method || '기타';
-    pmMap[method] = (pmMap[method] || 0) + (Number(item.actualMarch || item.amount) || 0);
+    pmMap[method] = (pmMap[method] || 0) + (Number(item.amount) || 0);
   });
 
   Object.entries(pmMap).forEach(([pm, amt]) => {
@@ -812,6 +868,28 @@ function renderPaymentMethodSummary() {
     card.className = 'pm-card';
     card.innerHTML = `
       <div class="pm-name">${pm}</div>
+      <div class="pm-amount">${formatKRW(amt)}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function renderFixedCategorySummary() {
+  const container = document.getElementById('fixed-category-summary');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const fcMap = {};
+  appState.fixedExpenses.forEach(item => {
+    const cat = item.category || '기타';
+    fcMap[cat] = (fcMap[cat] || 0) + (Number(item.amount) || 0);
+  });
+
+  Object.entries(fcMap).forEach(([cat, amt]) => {
+    const card = document.createElement('div');
+    card.className = 'pm-card';
+    card.innerHTML = `
+      <div class="pm-name">${cat}</div>
       <div class="pm-amount">${formatKRW(amt)}</div>
     `;
     container.appendChild(card);
@@ -838,6 +916,34 @@ function renderCategoryAllocationSummary() {
   const calcs = calculateTotals();
   const baseIncome = calcs.totalIncome > 0 ? calcs.totalIncome : 1;
 
+  // Add Total Sum Card (Top)
+  if (totalAlloc > 0) {
+    const allocPct = ((totalAlloc / baseIncome) * 100).toFixed(1);
+    const totalCard = document.createElement('div');
+    totalCard.className = 'pm-card';
+    totalCard.style.border = '1px solid var(--accent-total)';
+    totalCard.style.backgroundColor = 'rgba(139, 92, 246, 0.05)';
+    totalCard.innerHTML = `
+      <div class="pm-name"><span class="badge badge-total" style="font-weight: bold;">총 합계</span></div>
+      <div class="pm-amount" style="margin-top:4px; color: var(--text-main); font-weight: 700;">${formatKRW(totalAlloc)}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 수입 대비 ${allocPct}%</div>
+    `;
+    container.appendChild(totalCard);
+  }
+
+  // Add Remaining Balance Card (Top)
+  const remainPct = ((calcs.remainingBalance / baseIncome) * 100).toFixed(1);
+  const remainCard = document.createElement('div');
+  remainCard.className = 'pm-card';
+  remainCard.style.border = '1px solid var(--accent-remain)';
+  remainCard.style.backgroundColor = 'rgba(14, 165, 233, 0.05)';
+  remainCard.innerHTML = `
+    <div class="pm-name"><span class="badge badge-remain" style="font-weight: bold;">남은 잔액</span></div>
+    <div class="pm-amount" style="margin-top:4px; color: ${calcs.remainingBalance < 0 ? 'var(--accent-danger)' : 'var(--accent-remain)'}; font-weight: 700;">${formatKRW(calcs.remainingBalance)}</div>
+    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 수입 대비 ${remainPct}%</div>
+  `;
+  container.appendChild(remainCard);
+
   const sortedCats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
 
   sortedCats.forEach(([cat, amt]) => {
@@ -853,34 +959,6 @@ function renderCategoryAllocationSummary() {
     `;
     container.appendChild(card);
   });
-
-  // Add Total Sum Card
-  if (totalAlloc > 0) {
-    const allocPct = ((totalAlloc / baseIncome) * 100).toFixed(1);
-    const totalCard = document.createElement('div');
-    totalCard.className = 'pm-card';
-    totalCard.style.border = '1px solid var(--accent-primary)';
-    totalCard.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
-    totalCard.innerHTML = `
-      <div class="pm-name"><span class="badge badge-primary" style="font-weight: bold;">총 합계</span></div>
-      <div class="pm-amount" style="margin-top:4px; color: var(--text-main); font-weight: 700;">${formatKRW(totalAlloc)}</div>
-      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 수입 대비 ${allocPct}%</div>
-    `;
-    container.appendChild(totalCard);
-  }
-
-  // Add Remaining Balance Card
-  const remainPct = ((calcs.remainingBalance / baseIncome) * 100).toFixed(1);
-  const remainCard = document.createElement('div');
-  remainCard.className = 'pm-card';
-  remainCard.style.border = '1px solid var(--accent-success)';
-  remainCard.style.backgroundColor = 'rgba(16, 185, 129, 0.05)';
-  remainCard.innerHTML = `
-    <div class="pm-name"><span class="badge badge-success" style="font-weight: bold;">남은 잔액</span></div>
-    <div class="pm-amount" style="margin-top:4px; color: ${calcs.remainingBalance < 0 ? 'var(--accent-danger)' : 'var(--accent-success)'}; font-weight: 700;">${formatKRW(calcs.remainingBalance)}</div>
-    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 수입 대비 ${remainPct}%</div>
-  `;
-  container.appendChild(remainCard);
 }
 
 // Render Monthly History Table
@@ -1146,11 +1224,19 @@ function openCategoryManagerModal(mode) {
     appState.categories = {
       recipients: ['계원', '동욱', '공통 / 가구'],
       incomeItems: ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입'],
-      allocCategories: ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사']
+      allocCategories: ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'],
+      paymentMethods: ['현금', '하나카드', '오빠카드(삼성)', '오빠카드', '우리카드', '신한카드', '카드'],
+      fixedCategories: ['용돈', '곳돈', '구독', '보험', '핸드폰요금', '주거', '교통']
     };
   }
   if (!appState.categories.allocCategories) {
     appState.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
+  }
+  if (!appState.categories.paymentMethods) {
+    appState.categories.paymentMethods = ['현금', '하나카드', '오빠카드(삼성)', '오빠카드', '우리카드', '신한카드', '카드'];
+  }
+  if (!appState.categories.fixedCategories) {
+    appState.categories.fixedCategories = ['용돈', '곳돈', '구독', '보험', '핸드폰요금', '주거', '교통'];
   }
 
   const renderCatLists = () => {
@@ -1348,19 +1434,223 @@ window.deleteAllocCategory = function(idx) {
   renderAllocationTables();
 };
 
+// Payment Method CRUD
+window.addPaymentMethod = function() {
+  const input = document.getElementById('new-payment-method-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val) {
+    if (!appState.categories.paymentMethods.includes(val)) {
+      appState.categories.paymentMethods.push(val);
+      saveState();
+      openCategoryManagerModal();
+      renderFixedExpensesTable();
+      updateMethodFilterDropdown();
+    }
+  }
+};
+
+window.editPaymentMethod = function(idx) {
+  const oldVal = appState.categories.paymentMethods[idx];
+  const newVal = prompt('결제 수단 이름을 수정하세요:', oldVal);
+  if (newVal && newVal.trim() !== '' && newVal.trim() !== oldVal) {
+    const trimmed = newVal.trim();
+    appState.categories.paymentMethods[idx] = trimmed;
+    // Update all fixed expenses using this method
+    (appState.fixedExpenses || []).forEach(item => {
+      if (item.method === oldVal) item.method = trimmed;
+    });
+    saveState();
+    openCategoryManagerModal();
+    renderFixedExpensesTable();
+    updateMethodFilterDropdown();
+  }
+};
+
+window.deletePaymentMethod = function(idx) {
+  if ((appState.categories.paymentMethods || []).length <= 1) {
+    alert('최소 1개 이상의 결제 수단이 필요합니다.');
+    return;
+  }
+  appState.categories.paymentMethods.splice(idx, 1);
+  saveState();
+  openCategoryManagerModal();
+  renderFixedExpensesTable();
+  updateMethodFilterDropdown();
+};
+
+function updateMethodFilterDropdown() {
+  const sel = document.getElementById('filter-method');
+  if (!sel) return;
+  const current = sel.value;
+  const methods = appState.categories?.paymentMethods || [];
+  sel.innerHTML = `<option value="ALL">전체</option>${methods.map(m => `<option value="${m}" ${current === m ? 'selected' : ''}>${m}</option>`).join('')}`;
+}
+
+window.editFixedExpenseMethod = function(element, itemId) {
+  const item = (appState.fixedExpenses || []).find(i => i.id === itemId);
+  if (!item) return;
+  const methods = appState.categories?.paymentMethods || [];
+  openCategoryPickerModal({
+    title: '\uacb0\uc81c \uc218\ub2e8 \uc120\ud0dd',
+    currentCategory: item.method,
+    categoryList: methods,
+    type: 'paymentMethod',
+    onSelect: (selected) => {
+      item.method = selected;
+      saveState();
+      renderFixedExpensesTable();
+      closeModal();
+    }
+  });
+};
+
+window.openPaymentMethodManagerModal = function() {
+  document.getElementById('modal-title').innerText = '\uacb0\uc81c\uc218\ub2e8 \ubc0f \uce74\ud14c\uace0\ub9ac \uad00\ub9ac';
+  const body = document.getElementById('modal-body');
+
+  if (!appState.categories) appState.categories = {};
+  if (!appState.categories.paymentMethods) {
+    appState.categories.paymentMethods = ['\ud604\uae08', '\ud558\ub098\uce74\ub4dc', '\uc624\ube60\uce74\ub4dc(\uc0bc\uc131)', '\uc624\ube60\uce74\ub4dc', '\uc6b0\ub9ac\uce74\ub4dc', '\uc2e0\ud55c\uce74\ub4dc', '\uce74\ub4dc'];
+  }
+  if (!appState.categories.fixedCategories) {
+    appState.categories.fixedCategories = ['\uc6a9\ub3c8', '\uacf3\ub3c8', '\uad6c\ub3c5', '\ubcf4\ud5d8', '\ud578\ub4dc\ud3f0\uc694\uae08', '\uc8fc\uac70', '\uad50\ud1b5'];
+  }
+
+  const renderAll = () => {
+    body.innerHTML = `
+      <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
+        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> \uacb0\uc81c \uc218\ub2e8</h4>
+        <p class="text-muted mb-3" style="font-size:12px;">\ub4f1\ub85d\ub41c \uacb0\uc81c \uc218\ub2e8\uc744 \uad00\ub9ac\ud569\ub2c8\ub2e4. \uc218\uc815 \uc2dc \uae30\uc874 \ud56d\ubaa9\uc5d0 \uc790\ub3d9 \ubc18\uc601\ub429\ub2c8\ub2e4.</p>
+        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;">
+          ${(appState.categories.paymentMethods || []).map((pm, idx) => `
+            <span style="display:inline-flex; align-items:center; gap:8px;">
+              ${getPaymentMethodHTML(pm)}
+              <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" onclick="editPMInModal(${idx})"></i>
+              <i class="fa-solid fa-xmark text-muted" style="cursor:pointer;" onclick="deletePMInModal(${idx})"></i>
+            </span>
+          `).join('')}
+        </div>
+        <div class="flex-gap-2">
+          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="\uc0c8 \uacb0\uc81c\uc218\ub2e8 (\uc608: \uc2e0\ud55c\uce74\ub4dc, \uce74\uce74\uc624\ud398\uc774)">
+          <button class="btn btn-primary btn-sm" onclick="addPaymentMethodFromModal()"><i class="fa-solid fa-plus"></i> \ucd94\uac00</button>
+        </div>
+      </div>
+
+      <div class="card-box" style="padding: 16px; background: rgba(0,0,0,0.2);">
+        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-tag"></i> \uace0\uc815\uc9c0\ucd9c \uce74\ud14c\uace0\ub9ac</h4>
+        <p class="text-muted mb-3" style="font-size:12px;">\uace0\uc815\uc9c0\ucd9c \ud56d\ubaa9\uc758 \uce74\ud14c\uace0\ub9ac\ub97c \uad00\ub9ac\ud569\ub2c8\ub2e4.</p>
+        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;">
+          ${(appState.categories.fixedCategories || []).map((cat, idx) => `
+            <span style="display:inline-flex; align-items:center; gap:8px;">
+              ${getFixedCategoryHTML(cat)}
+              <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" onclick="editFCatInModal(${idx})"></i>
+              <i class="fa-solid fa-xmark text-muted" style="cursor:pointer;" onclick="deleteFCatInModal(${idx})"></i>
+            </span>
+          `).join('')}
+        </div>
+        <div class="flex-gap-2">
+          <input type="text" id="new-fcat-modal-input" class="form-control form-control-sm" placeholder="\uc0c8 \uce74\ud14c\uace0\ub9ac (\uc608: \ud1b5\uc2e0\ube44, \uad50\uc721, \uc6b4\ub3d9)">
+          <button class="btn btn-primary btn-sm" onclick="addFCatFromModal()"><i class="fa-solid fa-plus"></i> \ucd94\uac00</button>
+        </div>
+      </div>
+    `;
+  };
+
+  window.addPaymentMethodFromModal = function() {
+    const input = document.getElementById('new-pm-modal-input');
+    if (!input) return;
+    const val = input.value.trim();
+    if (val && !appState.categories.paymentMethods.includes(val)) {
+      appState.categories.paymentMethods.push(val);
+      saveState(); updateMethodFilterDropdown(); renderAll();
+    }
+  };
+  window.addFCatFromModal = function() {
+    const input = document.getElementById('new-fcat-modal-input');
+    if (!input) return;
+    const val = input.value.trim();
+    if (val && !appState.categories.fixedCategories.includes(val)) {
+      appState.categories.fixedCategories.push(val);
+      saveState(); renderAll();
+    }
+  };
+  window.editPMInModal = function(idx) {
+    const oldVal = appState.categories.paymentMethods[idx];
+    const newVal = prompt('\uacb0\uc81c \uc218\ub2e8 \uc774\ub984\uc744 \uc218\uc815\ud558\uc138\uc694:', oldVal);
+    if (newVal && newVal.trim() !== '' && newVal.trim() !== oldVal) {
+      const trimmed = newVal.trim();
+      appState.categories.paymentMethods[idx] = trimmed;
+      (appState.fixedExpenses || []).forEach(item => { if (item.method === oldVal) item.method = trimmed; });
+      saveState(); renderFixedExpensesTable(); updateMethodFilterDropdown(); renderAll();
+    }
+  };
+  window.deletePMInModal = function(idx) {
+    if ((appState.categories.paymentMethods || []).length <= 1) { alert('\ucd5c\uc18c 1\uac1c \uc774\uc0c1 \ud544\uc694'); return; }
+    appState.categories.paymentMethods.splice(idx, 1);
+    saveState(); renderFixedExpensesTable(); updateMethodFilterDropdown(); renderAll();
+  };
+  window.editFCatInModal = function(idx) {
+    const oldVal = appState.categories.fixedCategories[idx];
+    const newVal = prompt('\uce74\ud14c\uace0\ub9ac \uc774\ub984\uc744 \uc218\uc815\ud558\uc138\uc694:', oldVal);
+    if (newVal && newVal.trim() !== '' && newVal.trim() !== oldVal) {
+      const trimmed = newVal.trim();
+      appState.categories.fixedCategories[idx] = trimmed;
+      (appState.fixedExpenses || []).forEach(item => { if (item.category === oldVal) item.category = trimmed; });
+      saveState(); renderFixedExpensesTable(); renderAll();
+    }
+  };
+  window.deleteFCatInModal = function(idx) {
+    if ((appState.categories.fixedCategories || []).length <= 1) { alert('\ucd5c\uc18c 1\uac1c \uc774\uc0c1 \ud544\uc694'); return; }
+    appState.categories.fixedCategories.splice(idx, 1);
+    saveState(); renderFixedExpensesTable(); renderAll();
+  };
+
+  renderAll();
+  document.getElementById('modal-save-btn').onclick = () => { closeModal(); };
+  document.getElementById('item-modal').classList.add('active');
+};
+
+window.editFixedExpenseCategory = function(element, itemId) {
+  const item = (appState.fixedExpenses || []).find(i => i.id === itemId);
+  if (!item) return;
+  const cats = appState.categories?.fixedCategories || [];
+  openCategoryPickerModal({
+    title: '\uace0\uc815\uc9c0\ucd9c \uce74\ud14c\uace0\ub9ac \uc120\ud0dd',
+    currentCategory: item.category,
+    categoryList: cats,
+    type: 'fixedCategory',
+    onSelect: (selected) => {
+      item.category = selected;
+      saveState();
+      renderFixedExpensesTable();
+      closeModal();
+    }
+  });
+};
+
 // Mobile & Web Touch-Friendly Category Picker Modal
-function openCategoryPickerModal({ title, currentCategory, categoryList, onSelect, onAddNew }) {
+function openCategoryPickerModal({ title, currentCategory, categoryList, onSelect, onAddNew, type }) {
   const body = document.getElementById('modal-body');
   document.getElementById('modal-title').innerText = title || '카테고리 선택';
 
   const categoryCards = (categoryList || []).map(cat => {
     const isSelected = cat === currentCategory;
-    const badgeClass = typeof getAllocCategoryBadgeClass === 'function' ? getAllocCategoryBadgeClass(cat) : 'badge-info';
+    let badgeHTML = '';
+    if (type === 'paymentMethod') {
+      badgeHTML = getPaymentMethodHTML(cat);
+    } else if (type === 'fixedCategory') {
+      badgeHTML = getFixedCategoryHTML(cat);
+    } else {
+      const badgeClass = typeof getAllocCategoryBadgeClass === 'function' ? getAllocCategoryBadgeClass(cat) : 'badge-info';
+      badgeHTML = `<span class="badge ${badgeClass}" style="font-size: 13px; padding: 6px 12px;">${cat}</span>`;
+    }
+
     return `
       <button class="btn btn-outline-light category-pick-btn ${isSelected ? 'active-cat' : ''}" 
               style="padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; text-align: left; display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);"
               onclick="selectPickedCategory('${cat}')">
-        <span class="badge ${badgeClass}" style="font-size: 13px; padding: 6px 12px;">${cat}</span>
+        ${badgeHTML}
         ${isSelected ? '<i class="fa-solid fa-circle-check text-success" style="font-size: 18px;"></i>' : '<i class="fa-solid fa-chevron-right text-muted" style="font-size: 12px;"></i>'}
       </button>
     `;
@@ -1695,12 +1985,8 @@ function openAddFixedExpenseModal() {
       <input type="text" id="modal-fe-name" class="form-control" placeholder="예: 관리비, OTT구독">
     </div>
     <div class="form-group">
-      <label>기준 금액 (원)</label>
+      <label>금액 (원)</label>
       <input type="number" id="modal-fe-amount" class="form-control" placeholder="0">
-    </div>
-    <div class="form-group">
-      <label>실제 지출 금액 (원)</label>
-      <input type="number" id="modal-fe-actual" class="form-control" placeholder="0">
     </div>
     <div class="form-group">
       <label>이체일자</label>
@@ -1708,18 +1994,14 @@ function openAddFixedExpenseModal() {
     </div>
     <div class="form-group">
       <label>결제수단</label>
-      <input type="text" id="modal-fe-method" class="form-control" placeholder="예: 하나카드, 현금, 오빠카드">
+      <select id="modal-fe-method" class="form-select">
+        ${(appState.categories?.paymentMethods || []).map(m => `<option value="${m}">${m}</option>`).join('')}
+      </select>
     </div>
     <div class="form-group">
       <label>카테고리</label>
       <select id="modal-fe-category" class="form-select">
-        <option value="보험">보험</option>
-        <option value="구독">구독</option>
-        <option value="용돈">용돈</option>
-        <option value="핸드폰요금">핸드폰요금</option>
-        <option value="주거">주거(관리비)</option>
-        <option value="곗돈">곗돈</option>
-        <option value="교통">교통</option>
+        ${(appState.categories?.fixedCategories || []).map(c => `<option value="${c}">${c}</option>`).join('')}
       </select>
     </div>
     <div class="form-group">
@@ -1733,9 +2015,9 @@ function openAddFixedExpenseModal() {
   document.getElementById('modal-save-btn').onclick = () => {
     const name = document.getElementById('modal-fe-name').value.trim();
     const amount = Number(document.getElementById('modal-fe-amount').value) || 0;
-    const actualMarch = Number(document.getElementById('modal-fe-actual').value) || amount;
+    const actualMarch = amount; // Merged with amount
     const day = document.getElementById('modal-fe-day').value.trim();
-    const method = document.getElementById('modal-fe-method').value.trim();
+    const method = document.getElementById('modal-fe-method').value;
     const category = document.getElementById('modal-fe-category').value;
     const note = document.getElementById('modal-fe-note').value.trim();
 
@@ -1849,6 +2131,11 @@ function renderCharts() {
       catMap[cat] = (catMap[cat] || 0) + Number(item.amount || 0);
     });
 
+    const calcs = calculateTotals();
+    if (calcs.remainingBalance > 0) {
+      catMap['남은 잔액'] = calcs.remainingBalance;
+    }
+
     const labels = Object.keys(catMap);
     const dataValues = Object.values(catMap);
     
@@ -1861,6 +2148,8 @@ function renderCharts() {
         case 'badge-warning': return '#f59e0b';
         case 'badge-danger': return '#ef4444';
         case 'badge-salary': return '#ec4899';
+        case 'badge-total': return '#8b5cf6';
+        case 'badge-remain': return '#84cc16';
         case 'badge-secondary': 
         default: return '#94a3b8';
       }
@@ -1900,7 +2189,7 @@ function renderCharts() {
     const pmMap = {};
     appState.fixedExpenses.forEach(item => {
       const pm = item.method || '기타';
-      pmMap[pm] = (pmMap[pm] || 0) + Number(item.actualMarch || item.amount || 0);
+      pmMap[pm] = (pmMap[pm] || 0) + Number(item.amount || 0);
     });
 
     if (paymentChartInstance) paymentChartInstance.destroy();
@@ -1924,6 +2213,61 @@ function renderCharts() {
           x: { grid: { display: false } },
           y: { grid: { color: 'rgba(255,255,255,0.05)' } }
         }
+      }
+    });
+  }
+
+  // 4. Fixed Category Chart
+  const fcCtx = document.getElementById('fixedCategoryChart');
+  if (fcCtx) {
+    const fcMap = {};
+    appState.fixedExpenses.forEach(item => {
+      const cat = item.category || '기타';
+      fcMap[cat] = (fcMap[cat] || 0) + Number(item.amount || 0);
+    });
+
+    if (fixedCategoryChartInstance) fixedCategoryChartInstance.destroy();
+
+    const fcLabels = Object.keys(fcMap);
+    const fcData = Object.values(fcMap);
+    const fcColors = fcLabels.map(cat => {
+      if (cat.includes('용돈')) return '#f472b6'; // pink
+      if (cat.includes('곗돈') || cat.includes('곗')) return '#fbbf24'; // amber
+      if (cat.includes('구독')) return '#38bdf8'; // sky blue
+      if (cat.includes('보험')) return '#818cf8'; // indigo
+      if (cat.includes('핸드폰') || cat.includes('통신')) return '#34d399'; // emerald
+      if (cat.includes('주거') || cat.includes('관리비')) return '#fb7185'; // rose
+      if (cat.includes('교통')) return '#a3e635'; // lime
+      return '#94a3b8'; // gray
+    });
+
+    fixedCategoryChartInstance = new Chart(fcCtx, {
+      type: 'doughnut',
+      data: {
+        labels: fcLabels,
+        datasets: [{
+          data: fcData,
+          backgroundColor: fcColors,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const val = context.raw;
+                const total = context.dataset.data.reduce((a,b)=>a+b,0);
+                const pct = total > 0 ? ((val/total)*100).toFixed(1) : 0;
+                return ` ${context.label}: ${formatKRW(val)}원 (${pct}%)`;
+              }
+            }
+          }
+        },
+        cutout: '70%'
       }
     });
   }

@@ -89,39 +89,37 @@
         <!-- Card 1: Combined Total Income -->
         <div class="kpi-card income-kpi">
           <div class="kpi-header">
-            <span class="kpi-title">총 수입</span>
+            <span class="kpi-title">총 수입 및 남은 잔액</span>
             <div class="kpi-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div>
           </div>
+          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2px;">총 수입</div>
           <div class="kpi-value" id="kpi-total-income">8,450,000 원</div>
-          <div class="kpi-sub" id="kpi-income-breakdown">
+          <div class="kpi-sub" id="kpi-income-breakdown" style="margin-bottom: 12px;">
             <!-- Income breakdown badges by category will be generated here -->
           </div>
-        </div>
-
-        <!-- Card 2: Combined Total Expenses / Allocations -->
-        <div class="kpi-card expense-kpi" style="display: none;">
-          <div class="kpi-header">
-            <span class="kpi-title">총 배분 및 지출</span>
-            <div class="kpi-icon"><i class="fa-solid fa-cart-shopping"></i></div>
-          </div>
-          <div class="kpi-value" id="kpi-total-expenses">0 원</div>
-          <div class="kpi-sub">
-            <span>고정비 <strong id="kpi-fixed-total">1,774,768원</strong></span>
-          </div>
-        </div>
-
-        <!-- Card 3: Remaining Balance (Surplus) -->
-        <div class="kpi-card balance-kpi">
-          <div class="kpi-header">
-            <span class="kpi-title">총 남은 잔액</span>
-            <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
-          </div>
+          
+          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2px;">총 남은 잔액</div>
           <div class="kpi-value" id="kpi-remaining-balance" style="font-size: 1.25rem;">0 원</div>
           <div class="kpi-sub flex-wrap" style="gap: 6px; margin-top: 4px;">
             <span class="badge badge-gyewon">계원 잔액: <strong id="kpi-remain-gyewon">0원</strong></span>
             <span class="badge badge-dongwook">동욱 잔액: <strong id="kpi-remain-dongwook">0원</strong></span>
           </div>
         </div>
+
+        <!-- Card 2: Combined Total Expenses / Allocations -->
+        <div class="kpi-card expense-kpi">
+          <div class="kpi-header">
+            <span class="kpi-title">총 배분 및 지출</span>
+            <div class="kpi-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+          </div>
+          <div class="kpi-value" id="kpi-total-expenses">0 원</div>
+          <div class="kpi-sub flex-wrap" style="gap: 8px; margin-top: 4px;">
+            <span class="badge badge-danger">고정비: <strong id="kpi-fixed-total">0원</strong></span>
+            <span class="badge badge-warning">변동비(배분): <strong id="kpi-variable-total">0원</strong></span>
+          </div>
+        </div>
+
+
 
         <!-- Card 4: Total Savings & Investments -->
         <div class="kpi-card savings-kpi">
@@ -157,8 +155,8 @@
       <!-- TAB 1: DASHBOARD -->
       <div id="tab-dashboard" class="tab-page active">
 
-        <!-- Grid 2 Columns: Category & Payment Method Charts -->
-        <div class="grid-2-col mb-4">
+        <!-- Grid 3 Columns: Category & Payment Method Charts -->
+        <div class="grid-3-col mb-4">
           <div class="card-box">
             <div class="card-box-header">
               <h3><i class="fa-solid fa-chart-pie"></i> 카테고리별 배분 비중</h3>
@@ -173,13 +171,25 @@
 
           <div class="card-box">
             <div class="card-box-header">
-              <h3><i class="fa-solid fa-credit-card"></i> 결제수단별 고정지출 요약</h3>
+              <h3><i class="fa-solid fa-credit-card"></i> 결제수단별 요약</h3>
             </div>
             <div id="payment-method-summary" class="payment-method-grid mb-3">
               <!-- Dynamically Populated -->
             </div>
-            <div class="chart-container-small">
+            <div class="chart-container-medium">
               <canvas id="paymentMethodChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card-box">
+            <div class="card-box-header">
+              <h3><i class="fa-solid fa-tag"></i> 고정지출 카테고리별 비중</h3>
+            </div>
+            <div id="fixed-category-summary" class="payment-method-grid mb-3">
+              <!-- Dynamically Populated -->
+            </div>
+            <div class="chart-container-medium">
+              <canvas id="fixedCategoryChart"></canvas>
             </div>
           </div>
         </div>
@@ -338,6 +348,9 @@
               <button class="btn btn-primary btn-sm" id="btn-add-fixed-expense">
                 <i class="fa-solid fa-plus"></i> 고정지출 항목 추가
               </button>
+              <button class="btn btn-secondary btn-sm" onclick="openPaymentMethodManagerModal()">
+                <i class="fa-solid fa-credit-card"></i> 결제수단 관리
+              </button>
             </div>
           </div>
 
@@ -387,12 +400,16 @@
           <!-- Fixed Expenses Stats Bar -->
           <div class="fixed-stats-summary mb-3">
             <div class="stat-pill">
-              <span class="label">고정비 기준 합계:</span>
-              <span class="value" id="fixed-stat-base">1,774,768 원</span>
+              <span class="label">생활비 예산:</span>
+              <span class="value text-accent" id="fixed-stat-living-budget">0 원</span>
             </div>
             <div class="stat-pill">
-              <span class="label">3월 실제 지출 합계:</span>
-              <span class="value text-accent" id="fixed-stat-actual">1,698,448 원</span>
+              <span class="label">고정비 합계:</span>
+              <span class="value" id="fixed-stat-base">0 원</span>
+            </div>
+            <div class="stat-pill">
+              <span class="label">잔여 생활비:</span>
+              <span class="value text-success" id="fixed-stat-remaining">0 원</span>
             </div>
             <div class="stat-pill">
               <span class="label">납부 완료율:</span>
@@ -407,8 +424,7 @@
                 <tr>
                   <th style="width:45px;">완료</th>
                   <th>항목명</th>
-                  <th>기준금액 (원)</th>
-                  <th>3월 실지출 (원)</th>
+                  <th>금액 (원)</th>
                   <th>이체일자</th>
                   <th>결제수단</th>
                   <th>카테고리</th>
