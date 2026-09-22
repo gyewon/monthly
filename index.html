@@ -138,24 +138,6 @@
 
       <!-- TAB 1: DASHBOARD -->
       <div id="tab-dashboard" class="tab-page active">
-        <!-- Monthly Trend Chart Section -->
-        <div class="card-box mb-4">
-          <div class="card-box-header">
-            <div>
-              <h3><i class="fa-solid fa-chart-line"></i> 월별 수입 및 지출 추이 (Month-over-Month Trend)</h3>
-              <p class="text-muted">매월 수입, 총지출, 고정지출 및 남은 잔액의 변동 추이입니다.</p>
-            </div>
-            <div class="chart-legend-custom">
-              <span class="legend-item"><span class="color-dot income"></span> 수입</span>
-              <span class="legend-item"><span class="color-dot expense"></span> 총지출/배분</span>
-              <span class="legend-item"><span class="color-dot fixed"></span> 고정지출</span>
-              <span class="legend-item"><span class="color-dot balance"></span> 남은잔액</span>
-            </div>
-          </div>
-          <div class="chart-container-large">
-            <canvas id="monthlyTrendChart"></canvas>
-          </div>
-        </div>
 
         <!-- Grid 2 Columns: Category & Payment Method Charts -->
         <div class="grid-2-col mb-4">
@@ -215,35 +197,8 @@
             </div>
           </div>
 
-          <!-- Income Recipient Filter Pills -->
-          <div class="filter-toolbar mb-3">
-            <div class="filter-group">
-              <label><i class="fa-solid fa-filter"></i> 대상 필터:</label>
-              <div id="income-recipient-pills" class="flex-gap-2">
-                <!-- Dynamically populated filter buttons -->
-              </div>
-            </div>
-          </div>
 
-          <!-- Income Summary Bar -->
-          <div class="income-summary-banner mb-3">
-            <div class="stat-pill">
-              <span class="label">계원 수입:</span>
-              <span class="value text-gyewon" id="gyewon-income-sum">0 원</span>
-            </div>
-            <div class="stat-pill">
-              <span class="label">동욱 수입:</span>
-              <span class="value text-dongwook" id="dongwook-income-sum">0 원</span>
-            </div>
-            <div class="stat-pill">
-              <span class="label">기타/공통 수입:</span>
-              <span class="value" id="common-income-sum">0 원</span>
-            </div>
-            <div class="stat-pill highlight">
-              <span class="label">총 수입 합계:</span>
-              <span class="value text-success" id="unified-income-total">0 원</span>
-            </div>
-          </div>
+
 
           <!-- Consolidated Unified Income Table -->
           <div class="table-responsive">
@@ -252,7 +207,6 @@
                 <tr>
                   <th>수입 대상</th>
                   <th>수입 카테고리</th>
-                  <th>수입 항목명</th>
                   <th>금액 (원)</th>
                   <th>입금일(월급날)</th>
                   <th>비고</th>
@@ -274,14 +228,6 @@
             <button class="btn btn-secondary btn-sm" id="btn-manage-alloc-categories">
               <i class="fa-solid fa-gear"></i> 카테고리 설정
             </button>
-            <div class="filter-toolbar" style="margin-bottom: 0;">
-              <div class="filter-group">
-                <label><i class="fa-solid fa-filter"></i> 대상 필터:</label>
-                <div id="alloc-recipient-pills" class="flex-gap-2">
-                  <!-- Dynamically populated filter buttons -->
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -299,8 +245,8 @@
             </div>
 
             <div class="allocation-summary-bar">
-              <div>총 수입: <strong id="g-summary-income">4,700,000</strong>원</div>
-              <div>배분 합계: <strong id="g-summary-alloc">0</strong>원</div>
+              <div>총 수입: <strong id="g-summary-income">4,700,000</strong></div>
+              <div>배분 합계: <strong id="g-summary-alloc">0</strong></div>
               <div>잔액: <span class="badge-balance" id="g-summary-remain">0원</span></div>
             </div>
 
@@ -312,7 +258,7 @@
                     <th>금액 (원)</th>
                     <th>은행/처</th>
                     <th>이체일자</th>
-                    <th>이체방식</th>
+                    <th>자동이체</th>
                     <th>카테고리</th>
                     <th style="width:40px;"></th>
                   </tr>
@@ -335,8 +281,8 @@
             </div>
 
             <div class="allocation-summary-bar">
-              <div>총 수입: <strong id="d-summary-income">3,750,000</strong>원</div>
-              <div>배분 합계: <strong id="d-summary-alloc">0</strong>원</div>
+              <div>총 수입: <strong id="d-summary-income">3,750,000</strong></div>
+              <div>배분 합계: <strong id="d-summary-alloc">0</strong></div>
               <div>잔액: <span class="badge-balance" id="d-summary-remain">0원</span></div>
             </div>
 
@@ -348,7 +294,7 @@
                     <th>금액 (원)</th>
                     <th>은행/처</th>
                     <th>이체일자</th>
-                    <th>이체방식</th>
+                    <th>자동이체</th>
                     <th>카테고리</th>
                     <th style="width:40px;"></th>
                   </tr>

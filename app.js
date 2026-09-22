@@ -132,31 +132,9 @@ function renderIncomeTables() {
 
   const calcs = calculateTotals();
 
-  const gSumElem = document.getElementById('gyewon-income-sum');
-  const dSumElem = document.getElementById('dongwook-income-sum');
-  const cSumElem = document.getElementById('common-income-sum');
-  const uTotalElem = document.getElementById('unified-income-total');
 
-  if (gSumElem) gSumElem.innerText = formatKRW(calcs.incomeGyewon);
-  if (dSumElem) dSumElem.innerText = formatKRW(calcs.incomeDongwook);
-  if (cSumElem) cSumElem.innerText = formatKRW(calcs.incomeCommon);
-  if (uTotalElem) uTotalElem.innerText = formatKRW(calcs.totalIncome);
 
-  // Render Recipient Filter Pills
-  renderIncomeFilterPills();
-
-  // Filter items
-  const filtered = (appState.incomes || []).filter(inc => {
-    if (currentIncomeRecipientFilter === 'ALL') return true;
-    const p = (inc.person || '').toLowerCase();
-    if (currentIncomeRecipientFilter === 'gyewon' || currentIncomeRecipientFilter === '계원') {
-      return p === 'gyewon' || p === '계원';
-    }
-    if (currentIncomeRecipientFilter === 'dongwook' || currentIncomeRecipientFilter === '동욱') {
-      return p === 'dongwook' || p === '동욱';
-    }
-    return inc.person === currentIncomeRecipientFilter;
-  });
+  const filtered = appState.incomes || [];
 
   filtered.forEach(inc => {
     let badgeClass = 'badge-info';
@@ -171,9 +149,8 @@ function renderIncomeTables() {
     tr.innerHTML = `
       <td><span class="badge ${badgeClass}">${personLabel}</span></td>
       <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineCategory(this, '${inc.id}', event)"><span class="badge badge-secondary" style="font-weight:600; cursor:pointer;">${categoryName}</span></div></td>
-      <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'title')">${inc.title}</div></td>
       <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급/금액 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
-      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')"><i class="fa-regular fa-calendar-check"></i> ${inc.day || '25일'}</div></td>
+      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')">${inc.day || '25일'}</div></td>
       <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'note')">${inc.note || '-'}</div></td>
       <td style="white-space:nowrap; text-align:right;">
         <button class="btn btn-outline-primary btn-sm" title="수입/월급 수정" onclick="openEditIncomeModal('${inc.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -183,48 +160,6 @@ function renderIncomeTables() {
     tbody.appendChild(tr);
   });
 }
-
-function renderIncomeFilterPills() {
-  const containers = [
-    document.getElementById('income-recipient-pills'),
-    document.getElementById('alloc-recipient-pills')
-  ].filter(Boolean);
-
-  if (containers.length === 0) return;
-
-  // Get recipient categories
-  const defaultRecipients = ['계원', '동욱', '공통 / 가구'];
-  const userRecipients = (appState.categories && appState.categories.recipients) ? appState.categories.recipients : defaultRecipients;
-  const allRecipients = Array.from(new Set([...defaultRecipients, ...userRecipients]));
-
-  containers.forEach(container => {
-    container.innerHTML = '';
-
-    const allBtn = document.createElement('button');
-    allBtn.className = `btn btn-sm ${currentIncomeRecipientFilter === 'ALL' ? 'btn-primary' : 'btn-glass'}`;
-    allBtn.innerText = '전체 보기';
-    allBtn.onclick = () => { 
-      currentIncomeRecipientFilter = 'ALL'; 
-      renderIncomeTables(); 
-      renderAllocationTables(); 
-    };
-    container.appendChild(allBtn);
-
-    allRecipients.forEach(r => {
-      const btn = document.createElement('button');
-      const isSelected = currentIncomeRecipientFilter === r;
-      btn.className = `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-glass'}`;
-      btn.innerText = r;
-      btn.onclick = () => { 
-        currentIncomeRecipientFilter = r; 
-        renderIncomeTables(); 
-        renderAllocationTables(); 
-      };
-      container.appendChild(btn);
-    });
-  });
-}
-
 // Supabase Integration Credentials
 const SUPABASE_URL = 'https://bdnqlcrpytkwuaonhgmm.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkbnFsY3JweXRrd3Vhb25oZ21tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MjYyMDEsImV4cCI6MjEwNTUwMjIwMX0.QLt4HgVyCoAR2oy1R5O3SdNe7N3XtVxP7rjabS3j_ew';
@@ -447,11 +382,11 @@ function setupEventListeners() {
   // Category Management & Income Addition Modal Triggers
   const btnCatManage = document.getElementById('btn-manage-categories');
   if (btnCatManage) {
-    btnCatManage.addEventListener('click', () => openCategoryManagerModal());
+    btnCatManage.addEventListener('click', () => openCategoryManagerModal('income'));
   }
   const btnAllocCatManage = document.getElementById('btn-manage-alloc-categories');
   if (btnAllocCatManage) {
-    btnAllocCatManage.addEventListener('click', () => openCategoryManagerModal());
+    btnAllocCatManage.addEventListener('click', () => openCategoryManagerModal('alloc'));
   }
   document.getElementById('btn-add-income-modal').addEventListener('click', () => openAddIncomeModal());
 
@@ -527,6 +462,17 @@ function renderAll() {
   renderCharts();
 }
 
+function getAllocCategoryBadgeClass(category) {
+  switch(category) {
+    case '생활비': return 'badge-info';
+    case '저축/적금': return 'badge-success';
+    case '투자/연금': return 'badge-primary';
+    case '대출금': return 'badge-danger';
+    case '비상금/경조사': return 'badge-warning';
+    default: return 'badge-secondary';
+  }
+}
+
 // Render Allocations Tables
 function renderAllocationTables() {
   const calcs = calculateTotals();
@@ -555,44 +501,17 @@ function renderAllocationTables() {
     else dRemainElem.classList.remove('negative');
   }
 
-  // Target Filter Visibility Control
+  // Target Filter Visibility Control (Removed filter hiding per user request)
   const gyewonCard = document.getElementById('alloc-gyewon-card');
   const dongwookCard = document.getElementById('alloc-dongwook-card');
   const allocContainer = document.getElementById('allocations-container');
 
-  const filter = (currentIncomeRecipientFilter || 'ALL').trim();
-  const filterLower = filter.toLowerCase();
-
   if (gyewonCard && dongwookCard) {
-    if (filter === 'ALL' || filterLower === 'all') {
-      gyewonCard.style.display = '';
-      dongwookCard.style.display = '';
-      if (allocContainer) allocContainer.style.gridTemplateColumns = '';
-    } else if (filter === '계원' || filterLower === 'gyewon') {
-      gyewonCard.style.display = '';
-      dongwookCard.style.display = 'none';
-      if (allocContainer) allocContainer.style.gridTemplateColumns = '1fr';
-    } else if (filter === '동욱' || filterLower === 'dongwook') {
-      gyewonCard.style.display = 'none';
-      dongwookCard.style.display = '';
-      if (allocContainer) allocContainer.style.gridTemplateColumns = '1fr';
-    } else {
-      gyewonCard.style.display = '';
-      dongwookCard.style.display = '';
-      if (allocContainer) allocContainer.style.gridTemplateColumns = '';
-    }
+    gyewonCard.style.display = '';
+    dongwookCard.style.display = '';
+    if (allocContainer) allocContainer.style.gridTemplateColumns = '';
   }
 
-function getAllocCategoryBadgeClass(category) {
-  switch(category) {
-    case '생활비': return 'badge-info';
-    case '저축/적금': return 'badge-success';
-    case '투자/연금': return 'badge-primary';
-    case '대출금': return 'badge-danger';
-    case '비상금/경조사': return 'badge-warning';
-    default: return 'badge-secondary';
-  }
-}
 
   // Populate Gyewon Allocation Rows
   const tbodyG = document.querySelector('#table-alloc-gyewon tbody');
@@ -606,7 +525,11 @@ function getAllocCategoryBadgeClass(category) {
         <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
         <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'day')">${item.day || '-'}</div></td>
-        <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'method')">${item.method || '-'}</div></td>
+        <td style="text-align:center;">
+          <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
+                 ${(item.isAutoTransfer === true || (item.isAutoTransfer === undefined && item.method && item.method.includes('자동'))) ? 'checked' : ''} 
+                 onclick="toggleAllocAutoTransfer('allocations.gyewon', '${item.id}')">
+        </td>
         <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineAllocCategory(this, 'allocations.gyewon', '${item.id}', event)"><span class="badge ${catBadge}" style="font-weight:600; cursor:pointer;">${item.category || '기타'}</span></div></td>
         <td><button class="btn btn-outline-danger btn-sm" onclick="deleteItem('allocations.gyewon', '${item.id}')"><i class="fa-solid fa-xmark"></i></button></td>
       `;
@@ -626,7 +549,11 @@ function getAllocCategoryBadgeClass(category) {
         <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
         <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'day')">${item.day || '-'}</div></td>
-        <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'method')">${item.method || '-'}</div></td>
+        <td style="text-align:center;">
+          <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
+                 ${(item.isAutoTransfer === true || (item.isAutoTransfer === undefined && item.method && item.method.includes('자동'))) ? 'checked' : ''} 
+                 onclick="toggleAllocAutoTransfer('allocations.dongwook', '${item.id}')">
+        </td>
         <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineAllocCategory(this, 'allocations.dongwook', '${item.id}', event)"><span class="badge ${catBadge}" style="font-weight:600; cursor:pointer;">${item.category || '기타'}</span></div></td>
         <td><button class="btn btn-outline-danger btn-sm" onclick="deleteItem('allocations.dongwook', '${item.id}')"><i class="fa-solid fa-xmark"></i></button></td>
       `;
@@ -775,7 +702,7 @@ function renderTimeline() {
     card.className = 'timeline-card';
     card.innerHTML = `
       <div class="timeline-card-header">
-        <span class="timeline-date"><i class="fa-regular fa-calendar-check"></i> ${day} 일정</span>
+        <span class="timeline-date">${day} 일정</span>
         <span class="timeline-count">
           ${totalIncomeDay > 0 ? `<span class="badge badge-gyewon">+${formatKRW(totalIncomeDay)}</span> ` : ''}
           ${totalOutDay > 0 ? `<span class="badge badge-info">-${formatKRW(totalOutDay)}</span>` : ''}
@@ -976,6 +903,28 @@ function deleteItem(pathStr, itemId) {
   }
 }
 
+window.toggleAllocAutoTransfer = function(pathStr, itemId) {
+  let list = resolvePath(pathStr);
+  if (!list) return;
+  let item = list.find(i => i.id === itemId);
+  if (item) {
+    let currentlyAuto = false;
+    if (item.isAutoTransfer !== undefined) {
+      currentlyAuto = item.isAutoTransfer;
+    } else if (item.method) {
+      currentlyAuto = item.method.includes('자동');
+    }
+    item.isAutoTransfer = !currentlyAuto;
+    if (!item.isAutoTransfer && item.method && item.method.includes('자동')) {
+      item.method = '';
+    } else if (item.isAutoTransfer) {
+      item.method = '자동이체';
+    }
+    saveState();
+    renderAll();
+  }
+};
+
 function toggleFixedPaid(itemId, isPaid) {
   const item = appState.fixedExpenses.find(i => i.id === itemId);
   if (item) {
@@ -1035,9 +984,21 @@ function attachIncomeModalFormatters() {
   }
 }
 
-function openCategoryManagerModal() {
+window.currentCategoryModalMode = 'all';
+
+function openCategoryManagerModal(mode) {
+  if (mode) {
+    window.currentCategoryModalMode = mode;
+  }
+  const currentMode = window.currentCategoryModalMode;
+
   const body = document.getElementById('modal-body');
-  document.getElementById('modal-title').innerText = '카테고리 설정 (수입 & 배분 통합 관리)';
+  
+  let title = '카테고리 설정 (수입 & 배분 통합 관리)';
+  if (currentMode === 'income') title = '카테고리 설정 (수입 통합 관리)';
+  else if (currentMode === 'alloc') title = '카테고리 설정 (월급 배분 내역)';
+  
+  document.getElementById('modal-title').innerText = title;
 
   if (!appState.categories) {
     appState.categories = {
@@ -1051,58 +1012,68 @@ function openCategoryManagerModal() {
   }
 
   const renderCatLists = () => {
-    body.innerHTML = `
-      <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
-        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-user-tag"></i> 수입 대상자 카테고리</h4>
-        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="recipient-cat-tags">
-          ${appState.categories.recipients.map((r, idx) => `
-            <span class="badge badge-info" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
-              ${r} 
-              <i class="fa-solid fa-pen-to-square" style="cursor:pointer;" title="이름 수정" onclick="editRecipientCategory(${idx})"></i>
-              <i class="fa-solid fa-xmark" style="cursor:pointer;" title="삭제" onclick="deleteRecipientCategory(${idx})"></i>
-            </span>
-          `).join('')}
-        </div>
-        <div class="flex-gap-2">
-          <input type="text" id="new-recipient-input" class="form-control form-control-sm" placeholder="새 대상자 이름 (예: 부부 비상금, 사업체)">
-          <button class="btn btn-primary btn-sm" onclick="addRecipientCategory()"><i class="fa-solid fa-plus"></i> 추가</button>
-        </div>
-      </div>
+    let html = '';
 
-      <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
-        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-list-check"></i> 수입 항목 카테고리</h4>
-        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="item-cat-tags">
-          ${appState.categories.incomeItems.map((item, idx) => `
-            <span class="badge badge-gyewon" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
-              ${item} 
-              <i class="fa-solid fa-pen-to-square" style="cursor:pointer;" title="이름 수정" onclick="editIncomeItemCategory(${idx})"></i>
-              <i class="fa-solid fa-xmark" style="cursor:pointer;" title="삭제" onclick="deleteIncomeItemCategory(${idx})"></i>
-            </span>
-          `).join('')}
+    if (currentMode === 'all' || currentMode === 'income') {
+      html += `
+        <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
+          <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-user-tag"></i> 수입 대상자 카테고리</h4>
+          <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="recipient-cat-tags">
+            ${appState.categories.recipients.map((r, idx) => `
+              <span class="badge badge-info" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
+                ${r} 
+                <i class="fa-solid fa-pen-to-square" style="cursor:pointer;" title="이름 수정" onclick="editRecipientCategory(${idx})"></i>
+                <i class="fa-solid fa-xmark" style="cursor:pointer;" title="삭제" onclick="deleteRecipientCategory(${idx})"></i>
+              </span>
+            `).join('')}
+          </div>
+          <div class="flex-gap-2">
+            <input type="text" id="new-recipient-input" class="form-control form-control-sm" placeholder="새 대상자 이름 (예: 부부 비상금, 사업체)">
+            <button class="btn btn-primary btn-sm" onclick="addRecipientCategory()"><i class="fa-solid fa-plus"></i> 추가</button>
+          </div>
         </div>
-        <div class="flex-gap-2">
-          <input type="text" id="new-item-cat-input" class="form-control form-control-sm" placeholder="새 수입 항목명 (예: 주식배당, 임대수익)">
-          <button class="btn btn-primary btn-sm" onclick="addIncomeItemCategory()"><i class="fa-solid fa-plus"></i> 추가</button>
-        </div>
-      </div>
 
-      <div class="card-box" style="padding: 16px; background: rgba(0,0,0,0.2);">
-        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-layer-group"></i> 월급 배분 카테고리</h4>
-        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="alloc-cat-tags">
-          ${(appState.categories.allocCategories || []).map((cat, idx) => `
-            <span class="badge ${getAllocCategoryBadgeClass(cat)}" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
-              ${cat} 
-              <i class="fa-solid fa-pen-to-square" style="cursor:pointer;" title="이름 수정" onclick="editAllocCategory(${idx})"></i>
-              <i class="fa-solid fa-xmark" style="cursor:pointer;" title="삭제" onclick="deleteAllocCategory(${idx})"></i>
-            </span>
-          `).join('')}
+        <div class="card-box ${currentMode === 'income' ? '' : 'mb-3'}" style="padding: 16px; background: rgba(0,0,0,0.2);">
+          <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-list-check"></i> 수입 항목 카테고리</h4>
+          <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="item-cat-tags">
+            ${appState.categories.incomeItems.map((item, idx) => `
+              <span class="badge badge-gyewon" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
+                ${item} 
+                <i class="fa-solid fa-pen-to-square" style="cursor:pointer;" title="이름 수정" onclick="editIncomeItemCategory(${idx})"></i>
+                <i class="fa-solid fa-xmark" style="cursor:pointer;" title="삭제" onclick="deleteIncomeItemCategory(${idx})"></i>
+              </span>
+            `).join('')}
+          </div>
+          <div class="flex-gap-2">
+            <input type="text" id="new-item-cat-input" class="form-control form-control-sm" placeholder="새 수입 항목명 (예: 주식배당, 임대수익)">
+            <button class="btn btn-primary btn-sm" onclick="addIncomeItemCategory()"><i class="fa-solid fa-plus"></i> 추가</button>
+          </div>
         </div>
-        <div class="flex-gap-2">
-          <input type="text" id="new-alloc-cat-input" class="form-control form-control-sm" placeholder="새 배분 카테고리명 (예: 통신비, 교육비, 여행적금)">
-          <button class="btn btn-primary btn-sm" onclick="addAllocCategory()"><i class="fa-solid fa-plus"></i> 추가</button>
+      `;
+    }
+
+    if (currentMode === 'all' || currentMode === 'alloc') {
+      html += `
+        <div class="card-box" style="padding: 16px; background: rgba(0,0,0,0.2);">
+          <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-layer-group"></i> 월급 배분 카테고리</h4>
+          <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;" id="alloc-cat-tags">
+            ${(appState.categories.allocCategories || []).map((cat, idx) => `
+              <span class="badge ${getAllocCategoryBadgeClass(cat)}" style="padding: 6px 12px; font-size:12px; display:inline-flex; align-items:center; gap:8px;">
+                ${cat} 
+                <i class="fa-solid fa-pen-to-square" style="cursor:pointer;" title="이름 수정" onclick="editAllocCategory(${idx})"></i>
+                <i class="fa-solid fa-xmark" style="cursor:pointer;" title="삭제" onclick="deleteAllocCategory(${idx})"></i>
+              </span>
+            `).join('')}
+          </div>
+          <div class="flex-gap-2">
+            <input type="text" id="new-alloc-cat-input" class="form-control form-control-sm" placeholder="새 배분 카테고리명 (예: 통신비, 교육비, 여행적금)">
+            <button class="btn btn-primary btn-sm" onclick="addAllocCategory()"><i class="fa-solid fa-plus"></i> 추가</button>
+          </div>
         </div>
-      </div>
-    `;
+      `;
+    }
+
+    body.innerHTML = html;
   };
 
   renderCatLists();
@@ -1197,72 +1168,97 @@ window.deleteIncomeItemCategory = function(idx) {
   renderIncomeTables();
 };
 
+// Mobile & Web Touch-Friendly Category Picker Modal
+function openCategoryPickerModal({ title, currentCategory, categoryList, onSelect, onAddNew }) {
+  const body = document.getElementById('modal-body');
+  document.getElementById('modal-title').innerText = title || '카테고리 선택';
+
+  const categoryCards = (categoryList || []).map(cat => {
+    const isSelected = cat === currentCategory;
+    const badgeClass = typeof getAllocCategoryBadgeClass === 'function' ? getAllocCategoryBadgeClass(cat) : 'badge-info';
+    return `
+      <button class="btn btn-outline-light category-pick-btn ${isSelected ? 'active-cat' : ''}" 
+              style="padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; text-align: left; display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);"
+              onclick="selectPickedCategory('${cat}')">
+        <span class="badge ${badgeClass}" style="font-size: 13px; padding: 6px 12px;">${cat}</span>
+        ${isSelected ? '<i class="fa-solid fa-circle-check text-success" style="font-size: 18px;"></i>' : '<i class="fa-solid fa-chevron-right text-muted" style="font-size: 12px;"></i>'}
+      </button>
+    `;
+  }).join('');
+
+  body.innerHTML = `
+    <p class="text-muted mb-3" style="font-size: 13px;">변경할 카테고리를 아래 목록에서 터치/클릭하세요.</p>
+    <div class="category-picker-list mb-3" style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
+      ${categoryCards}
+    </div>
+    <div class="d-flex flex-gap-2">
+      <button class="btn btn-primary btn-sm w-100" style="padding: 10px;" onclick="promptNewCategoryInPicker()">
+        <i class="fa-solid fa-plus"></i> 새 카테고리 직접 입력
+      </button>
+      <button class="btn btn-secondary btn-sm" style="padding: 10px; white-space: nowrap;" onclick="openCategoryManagerModal()">
+        <i class="fa-solid fa-gear"></i> 카테고리 관리
+      </button>
+    </div>
+  `;
+
+  window._activeCategoryPickerOnSelect = onSelect;
+  window._activeCategoryPickerOnAddNew = onAddNew;
+
+  document.getElementById('item-modal').classList.add('active');
+}
+
+window.selectPickedCategory = function(cat) {
+  closeModal();
+  if (window._activeCategoryPickerOnSelect) {
+    window._activeCategoryPickerOnSelect(cat);
+  }
+};
+
+window.promptNewCategoryInPicker = function() {
+  const newCat = prompt('새 카테고리명을 입력하세요:');
+  if (newCat && newCat.trim()) {
+    const trimmed = newCat.trim();
+    closeModal();
+    if (window._activeCategoryPickerOnAddNew) {
+      window._activeCategoryPickerOnAddNew(trimmed);
+    } else if (window._activeCategoryPickerOnSelect) {
+      window._activeCategoryPickerOnSelect(trimmed);
+    }
+  }
+};
+
 window.editInlineCategory = function(element, incId, evt) {
   if (evt) evt.stopPropagation();
-  if (element.querySelector('select')) return;
 
   const inc = (appState.incomes || []).find(i => i.id === incId);
   if (!inc) return;
 
   const itemCatList = (appState.categories && appState.categories.incomeItems) ? appState.categories.incomeItems : ['기본급 (급여)', '보너스 / 상여금', '인센티브', '부수입 / 알바', '투자수익 / 배당', '기타 수입'];
 
-  const select = document.createElement('select');
-  select.className = 'form-select form-select-sm';
-  select.style.width = '100%';
-  select.style.minWidth = '110px';
-
-  itemCatList.forEach(cat => {
-    const opt = document.createElement('option');
-    opt.value = cat;
-    opt.innerText = cat;
-    if ((inc.category || inc.title) === cat) opt.selected = true;
-    select.appendChild(opt);
-  });
-  const customOpt = document.createElement('option');
-  customOpt.value = 'NEW_CUSTOM';
-  customOpt.innerText = '+ 새 카테고리 추가...';
-  select.appendChild(customOpt);
-
-  element.innerHTML = '';
-  element.appendChild(select);
-
-  let committed = false;
-  const commitChange = (val) => {
-    if (committed) return;
-    committed = true;
-    if (val === 'NEW_CUSTOM') {
-      setTimeout(() => {
-        const newCat = prompt('새 수입 항목 카테고리명을 입력하세요:');
-        if (newCat && newCat.trim()) {
-          const trimmed = newCat.trim();
-          if (!appState.categories.incomeItems.includes(trimmed)) {
-            appState.categories.incomeItems.push(trimmed);
-          }
-          inc.category = trimmed;
-        }
-        saveState();
-        renderIncomeTables();
-      }, 50);
-    } else {
-      if (val) inc.category = val;
+  openCategoryPickerModal({
+    title: `${inc.title || '수입 항목'} 카테고리 변경`,
+    currentCategory: inc.category || inc.title,
+    categoryList: itemCatList,
+    onSelect: (selectedCat) => {
+      inc.category = selectedCat;
       saveState();
       renderIncomeTables();
+      renderCharts();
+    },
+    onAddNew: (newCat) => {
+      if (!appState.categories.incomeItems.includes(newCat)) {
+        appState.categories.incomeItems.push(newCat);
+      }
+      inc.category = newCat;
+      saveState();
+      renderIncomeTables();
+      renderCharts();
     }
-  };
-
-  select.onchange = (e) => commitChange(e.target.value);
-  select.onblur = (e) => {
-    if (select.value !== 'NEW_CUSTOM') {
-      commitChange(select.value);
-    }
-  };
-
-  setTimeout(() => select.focus(), 20);
+  });
 };
 
 window.editInlineAllocCategory = function(element, pathStr, itemId, evt) {
   if (evt) evt.stopPropagation();
-  if (element.querySelector('select')) return;
 
   const list = resolvePath(pathStr);
   const item = list.find(i => i.id === itemId);
@@ -1274,58 +1270,28 @@ window.editInlineAllocCategory = function(element, pathStr, itemId, evt) {
   }
   const catList = appState.categories.allocCategories;
 
-  const select = document.createElement('select');
-  select.className = 'form-select form-select-sm';
-  select.style.width = '100%';
-  select.style.minWidth = '110px';
-
-  catList.forEach(cat => {
-    const opt = document.createElement('option');
-    opt.value = cat;
-    opt.innerText = cat;
-    if (item.category === cat) opt.selected = true;
-    select.appendChild(opt);
-  });
-  const customOpt = document.createElement('option');
-  customOpt.value = 'NEW_CUSTOM';
-  customOpt.innerText = '+ 새 카테고리 추가...';
-  select.appendChild(customOpt);
-
-  element.innerHTML = '';
-  element.appendChild(select);
-
-  let committed = false;
-  const commitChange = (val) => {
-    if (committed) return;
-    committed = true;
-    if (val === 'NEW_CUSTOM') {
-      setTimeout(() => {
-        const newCat = prompt('새 배분 카테고리명을 입력하세요:');
-        if (newCat && newCat.trim()) {
-          const trimmed = newCat.trim();
-          if (!appState.categories.allocCategories.includes(trimmed)) {
-            appState.categories.allocCategories.push(trimmed);
-          }
-          item.category = trimmed;
-        }
-        saveState();
-        renderAllocationTables();
-      }, 50);
-    } else {
-      if (val) item.category = val;
+  openCategoryPickerModal({
+    title: `${item.name || '배분 항목'} 카테고리 변경`,
+    currentCategory: item.category,
+    categoryList: catList,
+    onSelect: (selectedCat) => {
+      item.category = selectedCat;
       saveState();
       renderAllocationTables();
+      renderCategoryAllocationSummary();
+      renderCharts();
+    },
+    onAddNew: (newCat) => {
+      if (!appState.categories.allocCategories.includes(newCat)) {
+        appState.categories.allocCategories.push(newCat);
+      }
+      item.category = newCat;
+      saveState();
+      renderAllocationTables();
+      renderCategoryAllocationSummary();
+      renderCharts();
     }
-  };
-
-  select.onchange = (e) => commitChange(e.target.value);
-  select.onblur = (e) => {
-    if (select.value !== 'NEW_CUSTOM') {
-      commitChange(select.value);
-    }
-  };
-
-  setTimeout(() => select.focus(), 20);
+  });
 };
 
 function openAddIncomeModal() {
@@ -1347,12 +1313,10 @@ function openAddIncomeModal() {
     </div>
     <div class="form-group">
       <label>수입 항목 카테고리 선택</label>
-      <select id="modal-inc-cat-select" class="form-select mb-2">
+      <select id="modal-inc-cat-select" class="form-select">
         <option value="">-- 카테고리 선택 --</option>
         ${itemCatOptions}
-        <option value="CUSTOM">직접 입력...</option>
       </select>
-      <input type="text" id="modal-inc-title" class="form-control" placeholder="수입 항목명 (예: 기본급(급여), 성과급)">
     </div>
     <div class="form-group">
       <label>수입 / 월급 금액 (원)</label>
@@ -1373,14 +1337,16 @@ function openAddIncomeModal() {
 
   document.getElementById('modal-save-btn').onclick = () => {
     const person = document.getElementById('modal-inc-person').value;
-    const title = document.getElementById('modal-inc-title').value.trim();
+    const title = document.getElementById('modal-inc-cat-select').value;
+    if (!title) { alert('수입 항목 카테고리를 선택하세요.'); return; }
+    
     const rawAmt = document.getElementById('modal-inc-amount').value.replace(/,/g, '');
     const amount = Number(rawAmt) || 0;
     const dayInputVal = document.getElementById('modal-inc-day').value.trim();
     const day = formatDayInput(dayInputVal || '25일');
     const note = document.getElementById('modal-inc-note').value.trim();
 
-    if (!title) { alert('수입 항목명을 입력하세요.'); return; }
+
 
     appState.incomes.push({
       id: 'inc_' + Date.now(),
@@ -1421,12 +1387,10 @@ function openEditIncomeModal(incId) {
     </div>
     <div class="form-group">
       <label>수입 항목 카테고리 선택</label>
-      <select id="modal-inc-cat-select" class="form-select mb-2">
+      <select id="modal-inc-cat-select" class="form-select">
         <option value="">-- 카테고리 선택 --</option>
         ${itemCatOptions}
-        <option value="CUSTOM">직접 입력...</option>
       </select>
-      <input type="text" id="modal-inc-title" class="form-control" value="${inc.title}" placeholder="수입 항목명 입력">
     </div>
     <div class="form-group">
       <label>수입 / 월급 금액 (원) - 숫자 입력 시 , 자동 생성</label>
@@ -1447,7 +1411,10 @@ function openEditIncomeModal(incId) {
 
   document.getElementById('modal-save-btn').onclick = () => {
     inc.person = document.getElementById('modal-inc-person').value;
-    inc.title = document.getElementById('modal-inc-title').value.trim();
+    const title = document.getElementById('modal-inc-cat-select').value;
+    if (!title) { alert('수입 항목 카테고리를 선택하세요.'); return; }
+    inc.title = title;
+    inc.category = title;
     const rawAmt = document.getElementById('modal-inc-amount').value.replace(/,/g, '');
     inc.amount = Number(rawAmt) || 0;
     const dayInputVal = document.getElementById('modal-inc-day').value.trim();
@@ -1485,9 +1452,9 @@ function openAddAllocModal(personKey) {
       <label>이체일자</label>
       <input type="text" id="modal-alloc-day" class="form-control" placeholder="예: 22일, 16일">
     </div>
-    <div class="form-group">
-      <label>이체방식</label>
-      <input type="text" id="modal-alloc-method" class="form-control" placeholder="예: 자동이체, 오빠자동이체">
+    <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+      <input type="checkbox" id="modal-alloc-isAutoTransfer" class="form-check-input" style="width:1.2rem; height:1.2rem;">
+      <label for="modal-alloc-isAutoTransfer" style="margin-bottom:0;">자동이체 여부</label>
     </div>
     <div class="form-group">
       <label>카테고리</label>
@@ -1504,15 +1471,15 @@ function openAddAllocModal(personKey) {
     const amount = Number(document.getElementById('modal-alloc-amount').value) || 0;
     const bank = document.getElementById('modal-alloc-bank').value.trim();
     let day = document.getElementById('modal-alloc-day').value.trim();
-    let method = document.getElementById('modal-alloc-method').value.trim();
+    const isAutoTransfer = document.getElementById('modal-alloc-isAutoTransfer').checked;
     const category = document.getElementById('modal-alloc-category').value;
 
     if (!name) { alert('항목명을 입력하세요.'); return; }
     if (day) day = formatDayInput(day);
 
     const dayVal = day || '-';
-    const methodVal = method || '-';
-    const schedule = `${dayVal === '-' ? '' : dayVal} ${methodVal === '-' ? '' : methodVal}`.trim() || '-';
+    const methodVal = isAutoTransfer ? '자동이체' : '';
+    const schedule = `${dayVal === '-' ? '' : dayVal} ${methodVal}`.trim() || '-';
 
     appState.allocations[personKey].push({
       id: 'a_' + Date.now(),
@@ -1521,6 +1488,7 @@ function openAddAllocModal(personKey) {
       bank,
       day: dayVal,
       method: methodVal,
+      isAutoTransfer,
       schedule,
       category
     });
