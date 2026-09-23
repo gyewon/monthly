@@ -39,7 +39,11 @@ const DEFAULT_EXCEL_DATA = {
   },
   fixedExpenses: [
     { id: 'fe1', name: '각자용돈', amount: 760000, day: '2일', method: '현금', category: '용돈', note: '토스고정지출 자동이체', actualMarch: 760000, isPaid: true },
-    { id: 'fe2', name: '곗돈', amount: 240000, day: '2일/26일', method: '현금', category: '곗돈', note: '토스고정지출 자동이체 (10k / 230k)', actualMarch: 240000, isPaid: true },
+    { id: 'fe2_sagol', name: '곗돈 - 사골', amount: 20000, day: '2일', method: '현금', category: '곗돈', note: '토스고정지출 자동이체', actualMarch: 20000, isPaid: true, isAutoTransfer: true },
+    { id: 'fe2_yeojin_dogyeong', name: '곗돈 - 여진도경', amount: 20000, day: '26일', method: '현금', category: '곗돈', note: '토스고정지출 자동이체', actualMarch: 20000, isPaid: true, isAutoTransfer: true },
+    { id: 'fe2_jiyoung_soyeon', name: '곗돈 - 지영소연', amount: 30000, day: '26일', method: '현금', category: '곗돈', note: '토스고정지출 자동이체', actualMarch: 30000, isPaid: true, isAutoTransfer: true },
+    { id: 'fe2_newgrina', name: '곗돈 - 뉴그리나', amount: 20000, day: '26일', method: '현금', category: '곗돈', note: '토스고정지출 자동이체', actualMarch: 20000, isPaid: true, isAutoTransfer: true },
+    { id: 'fe2_family', name: '곗돈 - 가족', amount: 100000, day: '26일', method: '현금', category: '곗돈', note: '토스고정지출 자동이체', actualMarch: 100000, isPaid: true, isAutoTransfer: true },
     { id: 'fe3', name: '네이버멤버십', amount: 2450, day: '7일', method: '하나카드', category: '구독', note: '새마을금고 / 토스고정지출 자동이체', actualMarch: 2450, isPaid: true },
     { id: 'fe4', name: '힘이보험료(실비)', amount: 50000, day: '10일', method: '현금', category: '보험', note: '엄마가내주고적금넣음 / 토스고정지출 자동이체', actualMarch: 50000, isPaid: true },
     { id: 'fe5', name: '동욱보험비', amount: 177931, day: '10일', method: '오빠카드(삼성)', category: '보험', note: '토스고정지출 자동이체', actualMarch: 177931, isPaid: true },
@@ -243,6 +247,29 @@ function normalizeAllocationItem(item) {
 }
 
 function normalizeState(state) {
+  // Split the former combined 곗돈 row into the current transfer schedule.
+  if (state && Array.isArray(state.fixedExpenses)) {
+    const legacyIndex = state.fixedExpenses.findIndex(item => item && item.name === '곗돈');
+    if (legacyIndex !== -1) {
+      const legacy = state.fixedExpenses[legacyIndex];
+      const common = {
+        method: legacy.method || '현금',
+        category: '곗돈',
+        note: '토스고정지출 자동이체',
+        isPaid: Boolean(legacy.isPaid),
+        isAutoTransfer: true
+      };
+      const splitGyeExpenses = [
+        { id: 'fe2_sagol', name: '곗돈 - 사골', amount: 20000, day: '2일', actualMarch: 20000, ...common },
+        { id: 'fe2_yeojin_dogyeong', name: '곗돈 - 여진도경', amount: 20000, day: '26일', actualMarch: 20000, ...common },
+        { id: 'fe2_jiyoung_soyeon', name: '곗돈 - 지영소연', amount: 30000, day: '26일', actualMarch: 30000, ...common },
+        { id: 'fe2_newgrina', name: '곗돈 - 뉴그리나', amount: 20000, day: '26일', actualMarch: 20000, ...common },
+        { id: 'fe2_family', name: '곗돈 - 가족', amount: 100000, day: '26일', actualMarch: 100000, ...common }
+      ];
+      state.fixedExpenses.splice(legacyIndex, 1, ...splitGyeExpenses);
+    }
+  }
+
   if (state && state.allocations) {
     if (Array.isArray(state.allocations.gyewon)) {
       state.allocations.gyewon.forEach(normalizeAllocationItem);
@@ -497,7 +524,10 @@ function renderAll() {
   if (breakdownElem) {
     breakdownElem.innerHTML = breakdownHTML;
   }
-  document.getElementById('kpi-fixed-total').innerText = formatKRW(calcs.fixedExpenseActualTotal) + '원';
+  const fixedElem = document.getElementById('kpi-fixed-total');
+  if (fixedElem) {
+    fixedElem.innerText = formatKRW(calcs.fixedExpenseActualTotal) + '원';
+  }
   const variableTotal = calcs.totalExpenses - calcs.fixedExpenseActualTotal;
   const varElem = document.getElementById('kpi-variable-total');
   if (varElem) {
@@ -846,6 +876,15 @@ function renderTimeline() {
 
   sortedKeys.forEach(day => {
     const items = groups[day];
+
+    items.sort((a, b) => {
+      if (a.type === 'INCOME' && b.type !== 'INCOME') return -1;
+      if (a.type !== 'INCOME' && b.type === 'INCOME') return 1;
+      const catA = a.category || '';
+      const catB = b.category || '';
+      return catA.localeCompare(catB, 'ko-KR');
+    });
+
     const totalIncomeDay = items.filter(i => i.type === 'INCOME').reduce((acc, c) => acc + c.amount, 0);
     const totalOutDay = items.filter(i => i.type !== 'INCOME').reduce((acc, c) => acc + c.amount, 0);
 
