@@ -590,6 +590,7 @@ input:checked + .slider:before { transform: translateX(16px); }
 .chart-container-small {
   height: 220px;
   position: relative;
+  margin-top: auto;
 }
 
 /* Custom Chart Legend */

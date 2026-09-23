@@ -403,6 +403,9 @@ function setupEventListeners() {
       if (targetTab === 'dashboard') {
         renderCharts();
       }
+      if (targetTab === 'history') {
+        renderSavingsProjection();
+      }
     });
   });
 
@@ -532,6 +535,7 @@ function renderAll() {
 
   // Render Charts
   renderCharts();
+  renderSavingsProjection();
 }
 
 function getCategoryBadgeClass(category) {
@@ -712,7 +716,12 @@ function renderFixedExpensesTable() {
       </td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'name')">${item.name}</div></td>
       <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
-      <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
+      <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
+      <td style="text-align:center;">
+        <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
+               ${(item.isAutoTransfer === true || (item.isAutoTransfer === undefined && item.note && item.note.includes('자동'))) ? 'checked' : ''} 
+               onclick="toggleFixedAutoTransfer('${item.id}')">
+      </td>
       <td onclick="editFixedExpenseMethod(this, '${item.id}')" style="cursor:pointer; vertical-align:middle;">${methodHTML}</td>
       <td onclick="editFixedExpenseCategory(this, '${item.id}')" style="cursor:pointer; vertical-align:middle;">${fCatHTML}</td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'note')">${item.note || '-'}</div></td>
@@ -858,17 +867,35 @@ function renderPaymentMethodSummary() {
   container.innerHTML = '';
 
   const pmMap = {};
+  let totalFixed = 0;
   appState.fixedExpenses.forEach(item => {
     const method = item.method || '기타';
-    pmMap[method] = (pmMap[method] || 0) + (Number(item.amount) || 0);
+    const amt = Number(item.amount) || 0;
+    pmMap[method] = (pmMap[method] || 0) + amt;
+    totalFixed += amt;
   });
 
-  Object.entries(pmMap).forEach(([pm, amt]) => {
+  if (totalFixed > 0) {
+    const totalCard = document.createElement('div');
+    totalCard.className = 'pm-card pm-card-total';
+    totalCard.style.border = '1px solid var(--accent-total)';
+    totalCard.style.backgroundColor = 'rgba(139, 92, 246, 0.05)';
+    totalCard.innerHTML = `
+      <div class="pm-name"><span class="badge badge-total" style="font-weight: bold;">총 합계</span></div>
+      <div class="pm-amount" style="margin-top:4px; color: var(--text-main); font-weight: 700;">${formatKRW(totalFixed)}</div>
+    `;
+    container.appendChild(totalCard);
+  }
+
+  const sortedPm = Object.entries(pmMap).sort((a, b) => b[1] - a[1]);
+  sortedPm.forEach(([pm, amt]) => {
+    const pct = totalFixed > 0 ? ((amt / totalFixed) * 100).toFixed(1) : 0;
     const card = document.createElement('div');
     card.className = 'pm-card';
     card.innerHTML = `
       <div class="pm-name">${pm}</div>
-      <div class="pm-amount">${formatKRW(amt)}</div>
+      <div class="pm-amount" style="color:var(--text-main);">${formatKRW(amt)}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 고정비 대비 ${pct}%</div>
     `;
     container.appendChild(card);
   });
@@ -880,17 +907,35 @@ function renderFixedCategorySummary() {
   container.innerHTML = '';
 
   const fcMap = {};
+  let totalFixed = 0;
   appState.fixedExpenses.forEach(item => {
     const cat = item.category || '기타';
-    fcMap[cat] = (fcMap[cat] || 0) + (Number(item.amount) || 0);
+    const amt = Number(item.amount) || 0;
+    fcMap[cat] = (fcMap[cat] || 0) + amt;
+    totalFixed += amt;
   });
 
-  Object.entries(fcMap).forEach(([cat, amt]) => {
+  if (totalFixed > 0) {
+    const totalCard = document.createElement('div');
+    totalCard.className = 'pm-card pm-card-total';
+    totalCard.style.border = '1px solid var(--accent-total)';
+    totalCard.style.backgroundColor = 'rgba(139, 92, 246, 0.05)';
+    totalCard.innerHTML = `
+      <div class="pm-name"><span class="badge badge-total" style="font-weight: bold;">총 합계</span></div>
+      <div class="pm-amount" style="margin-top:4px; color: var(--text-main); font-weight: 700;">${formatKRW(totalFixed)}</div>
+    `;
+    container.appendChild(totalCard);
+  }
+
+  const sortedFc = Object.entries(fcMap).sort((a, b) => b[1] - a[1]);
+  sortedFc.forEach(([cat, amt]) => {
+    const pct = totalFixed > 0 ? ((amt / totalFixed) * 100).toFixed(1) : 0;
     const card = document.createElement('div');
     card.className = 'pm-card';
     card.innerHTML = `
       <div class="pm-name">${cat}</div>
-      <div class="pm-amount">${formatKRW(amt)}</div>
+      <div class="pm-amount" style="color:var(--text-main);">${formatKRW(amt)}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 고정비 대비 ${pct}%</div>
     `;
     container.appendChild(card);
   });
@@ -1114,6 +1159,28 @@ window.toggleAllocAutoTransfer = function(pathStr, itemId) {
     } else if (item.isAutoTransfer) {
       item.method = '자동이체';
     }
+    saveState();
+    renderAll();
+  }
+};
+
+window.toggleFixedAutoTransfer = function(itemId) {
+  let item = appState.fixedExpenses.find(i => i.id === itemId);
+  if (item) {
+    let currentlyAuto = false;
+    if (item.isAutoTransfer !== undefined) {
+      currentlyAuto = item.isAutoTransfer;
+    } else if (item.note) {
+      currentlyAuto = item.note.includes('자동');
+    }
+
+    const actionText = currentlyAuto ? '해제' : '설정';
+    if (!confirm(`해당 고정지출의 자동이체를 ${actionText}하시겠습니까?`)) {
+      renderAll(); // Revert visual state
+      return;
+    }
+
+    item.isAutoTransfer = !currentlyAuto;
     saveState();
     renderAll();
   }
@@ -1992,6 +2059,10 @@ function openAddFixedExpenseModal() {
       <label>이체일자</label>
       <input type="text" id="modal-fe-day" class="form-control" placeholder="예: 10일, 26일, 수기">
     </div>
+    <div class="form-group form-check mt-2 mb-3">
+      <input type="checkbox" class="form-check-input" id="modal-fe-autotransfer" checked>
+      <label class="form-check-label" for="modal-fe-autotransfer">자동이체 여부</label>
+    </div>
     <div class="form-group">
       <label>결제수단</label>
       <select id="modal-fe-method" class="form-select">
@@ -2020,6 +2091,7 @@ function openAddFixedExpenseModal() {
     const method = document.getElementById('modal-fe-method').value;
     const category = document.getElementById('modal-fe-category').value;
     const note = document.getElementById('modal-fe-note').value.trim();
+    const isAutoTransfer = document.getElementById('modal-fe-autotransfer').checked;
 
     if (!name) { alert('항목명을 입력하세요.'); return; }
 
@@ -2032,7 +2104,8 @@ function openAddFixedExpenseModal() {
       method,
       category,
       note,
-      isPaid: false
+      isPaid: false,
+      isAutoTransfer
     });
 
     closeModal();
@@ -2268,6 +2341,176 @@ function renderCharts() {
           }
         },
         cutout: '70%'
+      }
+    });
+  }
+}
+
+// Savings & Investment Projection
+let projectionChartInstance = null;
+
+function renderSavingsProjection() {
+  const calcs = calculateTotals();
+  const allAllocs = [...(appState.allocations?.gyewon || []), ...(appState.allocations?.dongwook || [])];
+
+  const catSavings = (appState.categories?.allocCategories) ? appState.categories.allocCategories[1] : '저축/적금';
+  const catInvest = (appState.categories?.allocCategories) ? appState.categories.allocCategories[2] : '투자/연금';
+  const catEmergency = (appState.categories?.allocCategories) ? appState.categories.allocCategories[4] : '비상금/경조사';
+
+  // Gather items by category
+  const savingsItems = allAllocs.filter(i => i.category === catSavings);
+  const investItems = allAllocs.filter(i => i.category === catInvest);
+  const emergencyItems = allAllocs.filter(i => i.category === catEmergency);
+
+  const monthlySavings = calcs.pureSavings;
+  const monthlyInvest = calcs.pureInvestment;
+  const monthlyEmergency = calcs.pureEmergency;
+  const monthlyTotal = monthlySavings + monthlyInvest + monthlyEmergency;
+
+  // Update KPI
+  const simSavingsEl = document.getElementById('sim-monthly-savings');
+  const simInvestEl = document.getElementById('sim-monthly-invest');
+  const simEmergencyEl = document.getElementById('sim-monthly-emergency');
+  const simTotalEl = document.getElementById('sim-monthly-total');
+  if (simSavingsEl) simSavingsEl.innerText = formatKRW(monthlySavings);
+  if (simInvestEl) simInvestEl.innerText = formatKRW(monthlyInvest);
+  if (simEmergencyEl) simEmergencyEl.innerText = formatKRW(monthlyEmergency);
+  if (simTotalEl) simTotalEl.innerText = formatKRW(monthlyTotal);
+
+  // Render detail table
+  const detailTbody = document.querySelector('#table-savings-detail tbody');
+  if (detailTbody) {
+    detailTbody.innerHTML = '';
+    const allItems = [
+      ...savingsItems.map(i => ({ ...i, catLabel: catSavings })),
+      ...investItems.map(i => ({ ...i, catLabel: catInvest })),
+      ...emergencyItems.map(i => ({ ...i, catLabel: catEmergency }))
+    ];
+
+    allItems.forEach(item => {
+      const amt = Number(item.amount) || 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.name}</td>
+        <td><span class="badge ${getAllocCategoryBadgeClass(item.catLabel)}">${item.catLabel}</span></td>
+        <td class="cell-amount">${formatKRW(amt)}</td>
+        <td class="cell-amount">${formatKRW(amt * 6)}</td>
+        <td class="cell-amount" style="font-weight:700; color:var(--accent-primary);">${formatKRW(amt * 12)}</td>
+      `;
+      detailTbody.appendChild(tr);
+    });
+
+    // Add total row
+    if (allItems.length > 0) {
+      const totalTr = document.createElement('tr');
+      totalTr.style.borderTop = '2px solid var(--border-color)';
+      totalTr.style.fontWeight = '700';
+      totalTr.innerHTML = `
+        <td colspan="2" style="text-align:right;">합계</td>
+        <td class="cell-amount">${formatKRW(monthlyTotal)}</td>
+        <td class="cell-amount">${formatKRW(monthlyTotal * 6)}</td>
+        <td class="cell-amount" style="color:var(--accent-primary);">${formatKRW(monthlyTotal * 12)}</td>
+      `;
+      detailTbody.appendChild(totalTr);
+    }
+  }
+
+  // Render Projection Chart
+  const projCtx = document.getElementById('projectionChart');
+  if (projCtx) {
+    if (projectionChartInstance) projectionChartInstance.destroy();
+
+    const labels = [];
+    const savingsData = [];
+    const investData = [];
+    const emergencyData = [];
+    const totalData = [];
+
+    for (let m = 1; m <= 12; m++) {
+      labels.push(`${m}개월`);
+      savingsData.push(monthlySavings * m);
+      investData.push(monthlyInvest * m);
+      emergencyData.push(monthlyEmergency * m);
+      totalData.push(monthlyTotal * m);
+    }
+
+    projectionChartInstance = new Chart(projCtx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: catSavings,
+            data: savingsData,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          {
+            label: catInvest,
+            data: investData,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          {
+            label: catEmergency,
+            data: emergencyData,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          {
+            label: '전체 누적',
+            data: totalData,
+            borderColor: '#ec4899',
+            backgroundColor: 'rgba(236, 72, 153, 0.05)',
+            borderDash: [5, 5],
+            fill: false,
+            tension: 0.3,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            borderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { position: 'top', labels: { color: '#94a3b8', font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${formatKRW(ctx.raw)}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#64748b' },
+            grid: { color: 'rgba(148, 163, 184, 0.1)' }
+          },
+          y: {
+            ticks: {
+              color: '#64748b',
+              callback: function(value) {
+                if (value >= 10000) return Math.floor(value / 10000).toLocaleString() + '만';
+                return value.toLocaleString() + '원';
+              }
+            },
+            grid: { color: 'rgba(148, 163, 184, 0.1)' }
+          }
+        }
       }
     });
   }
