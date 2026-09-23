@@ -84,36 +84,44 @@
 
       <!-- Key KPI Cards Banner -->
       <section class="kpi-banner">
-        <!-- Card 1: Combined Total Income -->
-        <div class="kpi-card income-kpi">
-          <div class="kpi-header">
-            <span class="kpi-title">총 수입 및 남은 잔액</span>
-            <div class="kpi-icon"><i class="fa-solid fa-money-bill-trend-up"></i></div>
-          </div>
-          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2px;">총 수입</div>
-          <div class="kpi-value" id="kpi-total-income">8,450,000 원</div>
-          <div class="kpi-sub" id="kpi-income-breakdown" style="margin-bottom: 12px;">
-            <!-- Income breakdown badges by category will be generated here -->
+        <!-- Card 1: Unified Financial Flow -->
+        <div class="kpi-card unified-kpi">
+          <div class="kpi-header mb-1">
+            <span class="kpi-title">통합 재정 요약</span>
+            <div class="kpi-icon"><i class="fa-solid fa-scale-balanced"></i></div>
           </div>
           
-          <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2px;">총 남은 잔액</div>
-          <div class="kpi-value" id="kpi-remaining-balance" style="font-size: 1.25rem;">0 원</div>
-          <div class="kpi-sub flex-wrap" style="gap: 6px; margin-top: 4px;">
-            <span class="badge badge-gyewon">계원 잔액: <strong id="kpi-remain-gyewon">0원</strong></span>
-            <span class="badge badge-dongwook">동욱 잔액: <strong id="kpi-remain-dongwook">0원</strong></span>
-          </div>
-        </div>
-
-        <!-- Card 2: Combined Total Expenses / Allocations -->
-        <div class="kpi-card expense-kpi">
-          <div class="kpi-header">
-            <span class="kpi-title">총 배분 및 지출</span>
-            <div class="kpi-icon"><i class="fa-solid fa-cart-shopping"></i></div>
-          </div>
-          <div class="kpi-value" id="kpi-total-expenses">0 원</div>
-          <div class="kpi-sub flex-wrap" style="gap: 8px; margin-top: 4px;">
-            <span class="badge badge-danger">고정비: <strong id="kpi-fixed-total">0원</strong></span>
-            <span class="badge badge-warning">변동비(배분): <strong id="kpi-variable-total">0원</strong></span>
+          <div class="financial-flow">
+            <!-- Income Section -->
+            <div class="flow-item">
+              <div class="flow-label text-muted">총 수입</div>
+              <div class="kpi-value" id="kpi-total-income">0 원</div>
+              <div class="kpi-sub" id="kpi-income-breakdown" style="margin-bottom: 8px;"></div>
+            </div>
+            
+            <div class="flow-operator"><i class="fa-solid fa-minus text-muted"></i></div>
+            
+            <!-- Expenses Section -->
+            <div class="flow-item">
+              <div class="flow-label text-muted">총 배분 및 지출</div>
+              <div class="kpi-value text-danger" id="kpi-total-expenses">0 원</div>
+              <div class="kpi-sub flex-wrap" style="gap: 8px; margin-top: 4px;">
+                <span class="badge badge-danger">고정비: <strong id="kpi-fixed-total">0원</strong></span>
+                <span class="badge badge-warning">변동비(배분): <strong id="kpi-variable-total">0원</strong></span>
+              </div>
+            </div>
+            
+            <div class="flow-operator"><i class="fa-solid fa-equals text-muted"></i></div>
+            
+            <!-- Remaining Balance Section -->
+            <div class="flow-item highlight-box">
+              <div class="flow-label text-muted" style="color: var(--accent-primary) !important; font-weight: 600;">총 남은 잔액</div>
+              <div class="kpi-value text-primary" id="kpi-remaining-balance" style="font-size: 1.35rem;">0 원</div>
+              <div class="kpi-sub flex-wrap" style="gap: 6px; margin-top: 4px;">
+                <span class="badge badge-gyewon">계원 잔액: <strong id="kpi-remain-gyewon">0원</strong></span>
+                <span class="badge badge-dongwook">동욱 잔액: <strong id="kpi-remain-dongwook">0원</strong></span>
+              </div>
+            </div>
           </div>
         </div>
 
