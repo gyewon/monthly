@@ -738,20 +738,28 @@ function renderFixedExpensesTable() {
     .filter(item => (item.category || '').includes('생활비'))
     .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
-  const livingRemaining = livingBudget - baseSum;
+  const FLEXIBLE_LIVING_BUDGET = 1000000;
+  const fixedExpenseBudget = livingBudget - FLEXIBLE_LIVING_BUDGET;
+  const fixedRemaining = fixedExpenseBudget - baseSum;
 
   const livingBudgetElem = document.getElementById('fixed-stat-living-budget');
-  if (livingBudgetElem) livingBudgetElem.innerText = formatKRW(livingBudget);
-
+  const fixedBudgetElem = document.getElementById('fixed-stat-fixed-budget');
   const livingRemainElem = document.getElementById('fixed-stat-remaining');
+  
+  if (livingBudgetElem) livingBudgetElem.innerText = formatKRW(livingBudget);
+  if (fixedBudgetElem) fixedBudgetElem.innerText = formatKRW(fixedExpenseBudget);
+
   if (livingRemainElem) {
-    livingRemainElem.innerText = formatKRW(livingRemaining);
-    livingRemainElem.className = `value ${livingRemaining < 0 ? 'text-danger' : 'text-success'}`;
+    livingRemainElem.innerText = formatKRW(fixedRemaining);
+    livingRemainElem.className = `value ${fixedRemaining < 0 ? 'text-danger' : 'text-success'}`;
   }
 
   const totalCount = filtered.length;
   const pct = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
-  document.getElementById('fixed-stat-completion').innerText = `${paidCount} / ${totalCount} (${pct}%)`;
+  const completionElem = document.getElementById('fixed-stat-completion');
+  if (completionElem) {
+    completionElem.innerText = `${paidCount} / ${totalCount} (${pct}%)`;
+  }
 }
 
 // Render Master Timeline / Deposit & Expense Schedule
@@ -766,16 +774,23 @@ function renderTimeline() {
     let rawDay = inc.day || '미지정';
     let dayKey = rawDay.includes('일') ? rawDay : (rawDay + '일');
     if (!groups[dayKey]) groups[dayKey] = [];
+    
+    // Fix: person string is already Korean in some datasets, handle both cases
+    let personName = inc.person;
+    if (personName === 'gyewon') personName = '계원';
+    if (personName === 'dongwook') personName = '동욱';
+
     groups[dayKey].push({
       type: 'INCOME',
-      name: `${inc.person === 'gyewon' ? '계원' : '동욱'} ${inc.title}`,
-      method: '입금',
-      amount: Number(inc.amount) || 0
+      name: `${personName} ${inc.title}`,
+      method: '급여/입금',
+      amount: Number(inc.amount) || 0,
+      category: inc.title
     });
   });
 
   // 2. Allocations (Gyewon)
-  (appState.allocations.gyewon || []).forEach(item => {
+  (appState.allocations?.gyewon || []).forEach(item => {
     let dayKey = '수기/기타';
     if (item.schedule && item.schedule.includes('일')) {
       const match = item.schedule.match(/(\d+일)/);
@@ -786,12 +801,13 @@ function renderTimeline() {
       type: 'ALLOCATION',
       name: `계원 ${item.name}`,
       method: item.bank || '자동이체',
-      amount: Number(item.amount) || 0
+      amount: Number(item.amount) || 0,
+      category: item.category
     });
   });
 
   // 3. Allocations (Dongwook)
-  (appState.allocations.dongwook || []).forEach(item => {
+  (appState.allocations?.dongwook || []).forEach(item => {
     let dayKey = '수기/기타';
     if (item.schedule && item.schedule.includes('일')) {
       const match = item.schedule.match(/(\d+일)/);
@@ -802,7 +818,8 @@ function renderTimeline() {
       type: 'ALLOCATION',
       name: `동욱 ${item.name}`,
       method: item.bank || '자동이체',
-      amount: Number(item.amount) || 0
+      amount: Number(item.amount) || 0,
+      category: item.category
     });
   });
 
@@ -814,8 +831,9 @@ function renderTimeline() {
     groups[dayKey].push({
       type: 'FIXED',
       name: item.name,
-      method: item.method || '카드',
-      amount: Number(item.amount) || 0
+      method: item.method || '결제수단',
+      amount: Number(item.amount) || 0,
+      category: item.category
     });
   });
 
@@ -837,21 +855,34 @@ function renderTimeline() {
       <div class="timeline-card-header">
         <span class="timeline-date">${day} 일정</span>
         <span class="timeline-count">
-          ${totalIncomeDay > 0 ? `<span class="badge badge-gyewon">+${formatKRW(totalIncomeDay)}</span> ` : ''}
-          ${totalOutDay > 0 ? `<span class="badge badge-info">-${formatKRW(totalOutDay)}</span>` : ''}
+          ${totalIncomeDay > 0 ? `<span class="badge badge-salary">+${formatKRW(totalIncomeDay)}</span> ` : ''}
+          ${totalOutDay > 0 ? `<span class="badge badge-remain">-${formatKRW(totalOutDay)}</span>` : ''}
         </span>
       </div>
       <ul class="timeline-item-list">
         ${items.map(i => {
-          let badgeClass = 'badge-dongwook';
+          let badgeClass = 'badge-secondary';
           let badgeText = '지출';
-          if (i.type === 'INCOME') { badgeClass = 'badge-gyewon'; badgeText = '입금'; }
-          else if (i.type === 'ALLOCATION') { badgeClass = 'badge-info'; badgeText = '배분'; }
+          
+          if (i.type === 'INCOME') {
+            badgeClass = 'badge-salary';
+            badgeText = '수입';
+          } else if (i.type === 'FIXED') {
+            badgeClass = 'badge-danger';
+            badgeText = '고정비';
+          } else if (i.type === 'ALLOCATION') {
+            badgeClass = getCategoryBadgeClass(i.category);
+            if ((i.category || '').includes('저축') || (i.category || '').includes('적금')) badgeText = '저축';
+            else if ((i.category || '').includes('투자') || (i.category || '').includes('연금')) badgeText = '투자';
+            else if ((i.category || '').includes('생활비')) badgeText = '생활비';
+            else if ((i.category || '').includes('비상금') || (i.category || '').includes('경조사')) badgeText = '비상금';
+            else badgeText = '지출';
+          }
 
           return `
             <li>
-              <span><span class="badge ${badgeClass}">${badgeText}</span> ${i.name} (${i.method})</span>
-              <strong class="${i.type === 'INCOME' ? 'text-success' : ''}">${formatKRW(i.amount)}</strong>
+              <span><span class="badge ${badgeClass}">${badgeText}</span> ${i.name} <small class="text-muted">(${i.method})</small></span>
+              <strong class="${i.type === 'INCOME' ? 'text-success' : 'text-danger'}">${i.type === 'INCOME' ? '+' : '-'}${formatKRW(i.amount)}</strong>
             </li>
           `;
         }).join('')}
