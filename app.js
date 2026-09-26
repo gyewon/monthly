@@ -172,7 +172,7 @@ function renderIncomeTables() {
       <td><span class="badge ${badgeClass}">${personLabel}</span></td>
       <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineCategory(this, '${inc.id}', event)"><span class="badge ${getCategoryBadgeClass(categoryName)}" style="font-weight:600; cursor:pointer;">${categoryName}</span></div></td>
       <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급/금액 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
-      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')">${(inc.day && inc.day !== '-') ? String(inc.day).replace(/일+$/, '') + '일' : '-'}</div></td>
+      <td><div class="editable-cell text-success font-weight-bold" title="클릭하여 입금일 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'day')">${formatDayDisplay(inc.day)}</div></td>
       <td><div class="editable-cell" title="클릭하여 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'note')">${inc.note || '-'}</div></td>
       <td style="white-space:nowrap; text-align:right;">
         <button class="btn btn-outline-primary btn-sm" title="수입/월급 수정" onclick="openEditIncomeModal('${inc.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
@@ -588,17 +588,42 @@ function getCategoryBadgeClass(category) {
 
 function getPaymentMethodHTML(method) {
   if (!method || method === '-') return '<span class="text-muted">-</span>';
+  
+  let logoUrl = '';
   let icon = 'fa-solid fa-credit-card';
   let color = '#94a3b8'; // gray
 
-  if (method.includes('현금')) { icon = 'fa-solid fa-money-bill-wave'; color = '#10b981'; }
-  else if (method.includes('하나')) { icon = 'fa-regular fa-credit-card'; color = '#06b6d4'; }
-  else if (method.includes('우리')) { icon = 'fa-regular fa-credit-card'; color = '#3b82f6'; }
-  else if (method.includes('신한')) { icon = 'fa-regular fa-credit-card'; color = '#818cf8'; }
-  else if (method.includes('삼성') || method.includes('오빠')) { icon = 'fa-regular fa-credit-card'; color = '#60a5fa'; }
-  else if (method.includes('자동이체') || method.includes('계좌')) { icon = 'fa-solid fa-building-columns'; color = '#c084fc'; }
+  if (method.includes('현금')) { 
+    icon = 'fa-solid fa-money-bill-wave'; color = '#10b981'; 
+  } else if (method.includes('하나')) { 
+    logoUrl = 'https://www.google.com/s2/favicons?domain=hanacard.co.kr&sz=64'; 
+  } else if (method.includes('우리')) { 
+    logoUrl = 'https://www.google.com/s2/favicons?domain=wooricard.com&sz=64'; 
+  } else if (method.includes('신한')) { 
+    logoUrl = 'https://www.google.com/s2/favicons?domain=shinhancard.com&sz=64'; 
+  } else if (method.includes('삼성')) { 
+    logoUrl = 'https://www.google.com/s2/favicons?domain=samsung.com&sz=64'; 
+  } else if (method.includes('토스')) { 
+    logoUrl = 'https://www.google.com/s2/favicons?domain=toss.im&sz=64'; 
+  } else if (method.includes('국민') || method.includes('KB')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=kbcard.com&sz=64';
+  } else if (method.includes('현대')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=hyundaicard.com&sz=64';
+  } else if (method.includes('롯데')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=lottecard.co.kr&sz=64';
+  } else if (method.includes('농협') || method.includes('NH')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=card.nonghyup.com&sz=64';
+  } else if (method.includes('카카오')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=kakaobank.com&sz=64';
+  } else if (method.includes('자동이체') || method.includes('계좌')) { 
+    icon = 'fa-solid fa-building-columns'; color = '#c084fc'; 
+  }
   
-  return `<span style="display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:13px; color:#f8fafc; cursor:pointer;"><i class="${icon}" style="color:${color}; font-size:15px;"></i> ${method}</span>`;
+  const iconElement = logoUrl 
+    ? `<img src="${logoUrl}" alt="${method}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; background: #fff; vertical-align: middle; box-shadow: 0 0 2px rgba(255,255,255,0.2);">` 
+    : `<i class="${icon}" style="color:${color}; font-size:16px; width:18px; text-align:center;"></i>`;
+
+  return `<span style="display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:14.5px; color:#f8fafc; cursor:pointer; padding:5px 8px; border-radius:6px; background-color:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">${iconElement} ${method}</span>`;
 }
 
 function getFixedCategoryHTML(category) {
@@ -669,7 +694,7 @@ function renderAllocationTables() {
         <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'deposit')">${item.deposit || '-'}</div></td>
-        <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
+        <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'day')">${formatDayDisplay(item.day)}</div></td>
         <td style="text-align:center;">
           <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
                  ${(item.isAutoTransfer === true || (item.isAutoTransfer === undefined && item.method && item.method.includes('자동'))) ? 'checked' : ''} 
@@ -694,7 +719,7 @@ function renderAllocationTables() {
         <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'deposit')">${item.deposit || '-'}</div></td>
-        <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
+        <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'day')">${formatDayDisplay(item.day)}</div></td>
         <td style="text-align:center;">
           <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
                  ${(item.isAutoTransfer === true || (item.isAutoTransfer === undefined && item.method && item.method.includes('자동'))) ? 'checked' : ''} 
@@ -737,11 +762,26 @@ function renderFixedExpensesTable() {
   let baseSum = 0;
   let actualSum = 0;
   let paidCount = 0;
+  let paidSum = 0;
+  let catData = {};
+  let methodData = {};
 
   filtered.forEach(item => {
-    baseSum += Number(item.amount) || 0;
+    const amt = Number(item.amount) || 0;
+    baseSum += amt;
     actualSum += Number(item.actualMarch) || 0;
-    if (item.isPaid) paidCount++;
+    if (item.isPaid) {
+      paidCount++;
+      paidSum += amt;
+      const c = item.category || '기타';
+      
+      // Normalize method name to group similar cards (e.g. '삼성카드_동욱' -> '삼성카드')
+      let m = item.method || '기타';
+      m = m.split('_')[0].split('(')[0].trim();
+      
+      catData[c] = (catData[c] || 0) + amt;
+      methodData[m] = (methodData[m] || 0) + amt;
+    }
 
     const methodHTML = getPaymentMethodHTML(item.method);
     const fCatHTML = getFixedCategoryHTML(item.category);
@@ -754,7 +794,7 @@ function renderFixedExpensesTable() {
       <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'deposit')">${item.deposit || '-'}</div></td>
-      <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
+      <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'day')">${formatDayDisplay(item.day)}</div></td>
       <td style="text-align:center;">
         <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
                ${(item.isAutoTransfer === true || (item.isAutoTransfer === undefined && item.note && item.note.includes('자동'))) ? 'checked' : ''} 
@@ -768,7 +808,7 @@ function renderFixedExpensesTable() {
     tbody.appendChild(tr);
   });
 
-  document.getElementById('fixed-stat-base').innerText = formatKRW(baseSum);
+  document.getElementById('fixed-stat-base').innerText = formatKRW(paidSum);
 
   // Calculate 생활비 budget from allocations
   const allAllocs = [...(appState.allocations?.gyewon || []), ...(appState.allocations?.dongwook || [])];
@@ -778,7 +818,7 @@ function renderFixedExpensesTable() {
 
   const FLEXIBLE_LIVING_BUDGET = 1000000;
   const fixedExpenseBudget = livingBudget - FLEXIBLE_LIVING_BUDGET;
-  const fixedRemaining = fixedExpenseBudget - baseSum;
+  const fixedRemaining = fixedExpenseBudget - paidSum;
 
   const livingBudgetElem = document.getElementById('fixed-stat-living-budget');
   const fixedBudgetElem = document.getElementById('fixed-stat-fixed-budget');
@@ -798,6 +838,124 @@ function renderFixedExpensesTable() {
   if (completionElem) {
     completionElem.innerText = `${paidCount} / ${totalCount} (${pct}%)`;
   }
+  
+  drawFixedCharts(catData, methodData, fixedRemaining);
+}
+
+let fixedCategoryChartInst = null;
+let fixedMethodChartInst = null;
+
+function drawFixedCharts(catData, methodData, fixedRemaining) {
+  const catCtx = document.getElementById('fixedTabCategoryChart');
+  const methodCtx = document.getElementById('fixedTabMethodChart');
+  if (!catCtx || !methodCtx) return;
+
+  if (fixedCategoryChartInst) fixedCategoryChartInst.destroy();
+  if (fixedMethodChartInst) fixedMethodChartInst.destroy();
+
+  const generateChartLabels = (chart) => {
+    const data = chart.data;
+    if (data.labels.length && data.datasets.length) {
+      const dataset = data.datasets[0];
+      const total = dataset.data.reduce((a, b) => a + b, 0);
+      return data.labels.map((label, i) => {
+        const value = dataset.data[i];
+        const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+        let formattedVal = value.toLocaleString();
+        const isHidden = !chart.getDataVisibility(i);
+        return {
+          text: `${label} ${pct}% (${formattedVal}원)`,
+          fillStyle: dataset.backgroundColor[i],
+          hidden: isHidden,
+          index: i,
+          fontColor: isHidden ? '#94a3b8' : '#f8fafc',
+          textDecoration: isHidden ? 'line-through' : '',
+          lineWidth: 0
+        };
+      });
+    }
+    return [];
+  };
+
+  const pieOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { 
+        position: 'right', 
+        labels: { 
+          boxWidth: 12, 
+          font: { size: 14, weight: 'normal' },
+          color: '#f8fafc',
+          generateLabels: generateChartLabels
+        } 
+      },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => ` ${ctx.label}: ${formatKRW(ctx.raw)}`
+        }
+      }
+    }
+  };
+
+  const catBaseColors = [
+    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+    '#06b6d4', '#f43f5e', '#14b8a6', '#6366f1', '#f97316',
+    '#ec4899', '#84cc16'
+  ];
+
+  const methodBaseColors = [
+    '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#0ea5e9',
+    '#84cc16', '#ef4444', '#10b981', '#eab308', '#6366f1'
+  ];
+
+  // Sort data descending by amount
+  const sortedCatLabels = Object.keys(catData).sort((a, b) => catData[b] - catData[a]);
+  const sortedCatValues = sortedCatLabels.map(k => catData[k]);
+  
+  if (fixedRemaining > 0) {
+    sortedCatLabels.push('미사용금액');
+    sortedCatValues.push(fixedRemaining);
+  }
+
+  const catBgColors = sortedCatLabels.map((label, i) => label === '미사용금액' ? '#475569' : catBaseColors[i % catBaseColors.length]);
+
+  fixedCategoryChartInst = new Chart(catCtx, {
+    type: 'doughnut',
+    data: {
+      labels: sortedCatLabels,
+      datasets: [{
+        data: sortedCatValues,
+        backgroundColor: catBgColors,
+        borderWidth: 0
+      }]
+    },
+    options: pieOptions
+  });
+
+  // Sort data descending by amount
+  const sortedMethodLabels = Object.keys(methodData).sort((a, b) => methodData[b] - methodData[a]);
+  const sortedMethodValues = sortedMethodLabels.map(k => methodData[k]);
+
+  if (fixedRemaining > 0) {
+    sortedMethodLabels.push('미사용금액');
+    sortedMethodValues.push(fixedRemaining);
+  }
+
+  const methodBgColors = sortedMethodLabels.map((label, i) => label === '미사용금액' ? '#475569' : methodBaseColors[i % methodBaseColors.length]);
+
+  fixedMethodChartInst = new Chart(methodCtx, {
+    type: 'doughnut',
+    data: {
+      labels: sortedMethodLabels,
+      datasets: [{
+        data: sortedMethodValues,
+        backgroundColor: methodBgColors,
+        borderWidth: 0
+      }]
+    },
+    options: pieOptions
+  });
 }
 
 // Render Master Timeline / Deposit & Expense Schedule
@@ -947,7 +1105,8 @@ function renderPaymentMethodSummary() {
   const pmMap = {};
   let totalFixed = 0;
   appState.fixedExpenses.forEach(item => {
-    const method = item.method || '기타';
+    let method = item.method || '기타';
+    method = method.split('_')[0].split('(')[0].trim();
     const amt = Number(item.amount) || 0;
     pmMap[method] = (pmMap[method] || 0) + amt;
     totalFixed += amt;
@@ -959,8 +1118,8 @@ function renderPaymentMethodSummary() {
     totalCard.style.border = '1px solid var(--accent-total)';
     totalCard.style.backgroundColor = 'rgba(139, 92, 246, 0.05)';
     totalCard.innerHTML = `
-      <div class="pm-name"><span class="badge badge-total" style="font-weight: bold;">총 합계</span></div>
-      <div class="pm-amount" style="margin-top:4px; color: var(--text-main); font-weight: 700;">${formatKRW(totalFixed)}</div>
+      <div class="pm-name" style="margin-bottom:8px;"><span class="badge badge-total" style="font-weight: bold; padding: 5px 10px; font-size:13px;">총 합계</span></div>
+      <div class="pm-amount" style="color: var(--text-main); font-weight: 700;">${formatKRW(totalFixed)}</div>
     `;
     container.appendChild(totalCard);
   }
@@ -971,9 +1130,9 @@ function renderPaymentMethodSummary() {
     const card = document.createElement('div');
     card.className = 'pm-card';
     card.innerHTML = `
-      <div class="pm-name">${pm}</div>
+      <div class="pm-name" style="margin-bottom:8px;">${getPaymentMethodHTML(pm)}</div>
       <div class="pm-amount" style="color:var(--text-main);">${formatKRW(amt)}</div>
-      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 고정비 대비 ${pct}%</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">총 고정비 대비 ${pct}%</div>
     `;
     container.appendChild(card);
   });
@@ -1082,6 +1241,13 @@ function renderCategoryAllocationSummary() {
     `;
     container.appendChild(card);
   });
+}
+
+function formatDayDisplay(val) {
+  if (!val || val === '-') return '-';
+  const s = String(val).trim();
+  if (s === '수기') return s;
+  return s.replace(/일+$/, '') + '일';
 }
 
 function formatDayInput(val) {

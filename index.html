@@ -411,7 +411,7 @@
               <span class="value text-accent" id="fixed-stat-fixed-budget">0 원</span>
             </div>
             <div class="stat-pill">
-              <span class="label">현재 고정비:</span>
+              <span class="label">사용 금액(완료):</span>
               <span class="value text-danger" id="fixed-stat-base">0 원</span>
             </div>
             <div class="stat-pill">
@@ -424,6 +424,18 @@
             </div>
           </div>
 
+          <!-- Charts for Category & Payment Method -->
+          <div class="grid-2-col" style="margin-bottom: 20px;">
+            <div class="card-box" style="padding: 16px; margin-bottom: 0;">
+              <h4 style="font-size:14px; text-align:center; margin-bottom:10px; color:var(--text-color); font-weight:700;">카테고리별 비중</h4>
+              <canvas id="fixedTabCategoryChart" style="max-height: 220px;"></canvas>
+            </div>
+            <div class="card-box" style="padding: 16px; margin-bottom: 0;">
+              <h4 style="font-size:14px; text-align:center; margin-bottom:10px; color:var(--text-color); font-weight:700;">결제수단별 비중</h4>
+              <canvas id="fixedTabMethodChart" style="max-height: 220px;"></canvas>
+            </div>
+          </div>
+
           <!-- Main Fixed Expenses Table -->
           <div class="table-responsive">
             <table class="table table-editable" id="table-fixed-expenses">
@@ -431,14 +443,14 @@
                 <tr>
                   <th style="width:45px;">완료</th>
                   <th>항목명</th>
-                  <th>금액 (원)</th>
+                  <th>금액(원)</th>
                   <th>출금처</th>
                   <th>입금처</th>
-                  <th style="cursor:pointer;" onclick="sortFixedExpenses('day')" title="이체일자 기준으로 정렬">이체일자 <i class="fa-solid fa-sort"></i></th>
+                  <th style="cursor:pointer;" onclick="sortFixedExpenses('day')" title="이체일 기준으로 정렬">이체일 <i class="fa-solid fa-sort"></i></th>
                   <th>자동이체</th>
                   <th>결제수단</th>
                   <th>카테고리</th>
-                  <th>참고 / 비고</th>
+                  <th>비고</th>
                   <th style="width:40px;"></th>
                 </tr>
               </thead>
