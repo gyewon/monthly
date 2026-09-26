@@ -432,7 +432,9 @@
                   <th style="width:45px;">완료</th>
                   <th>항목명</th>
                   <th>금액 (원)</th>
-                  <th>이체일자</th>
+                  <th>출금처</th>
+                  <th>입금처</th>
+                  <th style="cursor:pointer;" onclick="sortFixedExpenses('day')" title="이체일자 기준으로 정렬">이체일자 <i class="fa-solid fa-sort"></i></th>
                   <th>자동이체</th>
                   <th>결제수단</th>
                   <th>카테고리</th>
@@ -499,31 +501,6 @@
           </div>
         </div>
 
-        <!-- Monthly History Record -->
-        <div class="card-box mb-4">
-          <div class="card-box-header">
-            <div>
-              <h3><i class="fa-solid fa-clock-rotate-left"></i> 월별 재정 기록</h3>
-              <p class="text-muted">이전 달의 기록을 보관하여 추이를 확인합니다.</p>
-            </div>
-          </div>
-          <div class="table-responsive">
-            <table class="table" id="table-monthly-history">
-              <thead>
-                <tr>
-                  <th>월</th>
-                  <th>총 수입</th>
-                  <th>총 지출/배분</th>
-                  <th>고정지출</th>
-                  <th>총 저축/투자</th>
-                  <th>남은 잔액</th>
-                  <th>관리</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </main>
   </div>

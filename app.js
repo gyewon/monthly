@@ -306,6 +306,13 @@ function normalizeState(state) {
     });
   }
 
+  // Migration for bank 계원토스 -> 토스고정비
+  if (state && Array.isArray(state.fixedExpenses)) {
+    state.fixedExpenses.forEach(item => {
+      if (item.bank === '계원토스') item.bank = '토스고정비';
+    });
+  }
+
   return state;
 }
 
@@ -561,7 +568,6 @@ function renderAll() {
   renderPaymentMethodSummary();
   renderFixedCategorySummary();
   renderCategoryAllocationSummary();
-  renderHistoryTable();
 
   // Render Charts
   renderCharts();
@@ -746,6 +752,8 @@ function renderFixedExpensesTable() {
       </td>
       <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'name')">${item.name}</div></td>
       <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
+      <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
+      <td><div class="editable-cell" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'deposit')">${item.deposit || '-'}</div></td>
       <td><div class="editable-cell text-primary font-weight-bold" onclick="editInlineCell(this, 'fixedExpenses', '${item.id}', 'day')">${(item.day && item.day !== '-') ? String(item.day).replace(/일+$/, '') + '일' : '-'}</div></td>
       <td style="text-align:center;">
         <input type="checkbox" class="form-check-input" style="width:1.2rem; height:1.2rem; cursor:pointer;" 
@@ -1076,30 +1084,6 @@ function renderCategoryAllocationSummary() {
   });
 }
 
-// Render Monthly History Table
-function renderHistoryTable() {
-  const tbody = document.querySelector('#table-monthly-history tbody');
-  tbody.innerHTML = '';
-
-  (appState.monthlyHistory || []).forEach((h, idx) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><strong>${h.month}</strong></td>
-      <td class="text-accent">${formatKRW(h.totalIncome)}</td>
-      <td>${formatKRW(h.totalExpenses)}</td>
-      <td>${formatKRW(h.fixedExpenses)}</td>
-      <td>${formatKRW(h.savings)}</td>
-      <td><span class="badge-balance">${formatKRW(h.remaining)}</span></td>
-      <td>
-        <button class="btn btn-outline-danger btn-sm" onclick="deleteHistoryRow(${idx})">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
 function formatDayInput(val) {
   if (!val) return '';
   return String(val).trim().replace(/일+$/, '');
@@ -1121,17 +1105,42 @@ function editInlineCell(element, pathStr, itemId, fieldName, type = 'text') {
     input.value = Number(currVal) ? Number(currVal).toLocaleString('ko-KR') : (currVal === 0 ? '0' : '');
     // Format dynamically as user types
     input.addEventListener('input', (e) => {
-      let raw = e.target.value.replace(/[^0-9-]/g, '');
+      const el = e.target;
+      const originalValue = el.value;
+      const selectionStart = el.selectionStart || 0;
+
+      // Count raw characters before cursor
+      const rawBeforeCursorLength = originalValue.slice(0, selectionStart).replace(/[^0-9-]/g, '').length;
+
+      let raw = originalValue.replace(/[^0-9-]/g, '');
+      let newValue = '';
       if (raw) {
-        // Handle negative sign correctly
         if (raw === '-') {
-          e.target.value = '-';
+          newValue = '-';
         } else {
-          e.target.value = Number(raw).toLocaleString('ko-KR');
+          newValue = Number(raw).toLocaleString('ko-KR');
         }
-      } else {
-        e.target.value = '';
       }
+
+      el.value = newValue;
+
+      // Restore cursor position
+      let newCursorPos = 0;
+      let rawCount = 0;
+      for (let i = 0; i < newValue.length; i++) {
+        if (rawCount === rawBeforeCursorLength) {
+          newCursorPos = i;
+          break;
+        }
+        if (/[0-9-]/.test(newValue[i])) {
+          rawCount++;
+        }
+      }
+      if (rawCount === rawBeforeCursorLength) {
+        newCursorPos = newValue.length;
+      }
+
+      el.setSelectionRange(newCursorPos, newCursorPos);
     });
   } else {
     input.value = currVal;
@@ -1282,6 +1291,44 @@ window.sortAllocations = function(person, field) {
   renderAllocationTables();
 };
 
+window.sortFixedExpenses = function(field) {
+  if (!appState.fixedExpenses) return;
+  
+  if (!window.sortState) window.sortState = {};
+  if (!window.sortState.fixedExpenses) window.sortState.fixedExpenses = { field: null, asc: true };
+  
+  const state = window.sortState.fixedExpenses;
+  if (state.field === field) {
+    state.asc = !state.asc; // Toggle sort direction
+  } else {
+    state.field = field;
+    state.asc = true;
+  }
+  
+  appState.fixedExpenses.sort((a, b) => {
+    let valA = a[field] || '';
+    let valB = b[field] || '';
+
+    if (field === 'day') {
+      let numA = parseInt(valA);
+      let numB = parseInt(valB);
+      if (isNaN(numA)) numA = 999;
+      if (isNaN(numB)) numB = 999;
+      
+      if (numA !== numB) {
+        return state.asc ? (numA - numB) : (numB - numA);
+      }
+    }
+    
+    if (valA < valB) return state.asc ? -1 : 1;
+    if (valA > valB) return state.asc ? 1 : -1;
+    return 0;
+  });
+  
+  saveState();
+  renderFixedExpensesTable();
+};
+
 function toggleFixedPaid(itemId, isPaid) {
   const item = appState.fixedExpenses.find(i => i.id === itemId);
   if (item) {
@@ -1307,8 +1354,42 @@ function attachIncomeModalFormatters() {
   // 1. Real-time Thousands Comma Formatting
   if (amountInput) {
     amountInput.addEventListener('input', (e) => {
-      const raw = e.target.value.replace(/[^\d]/g, '');
-      e.target.value = raw ? Number(raw).toLocaleString('ko-KR') : '';
+      const el = e.target;
+      const originalValue = el.value;
+      const selectionStart = el.selectionStart || 0;
+
+      // Count raw characters before cursor
+      const rawBeforeCursorLength = originalValue.slice(0, selectionStart).replace(/[^0-9-]/g, '').length;
+
+      let raw = originalValue.replace(/[^0-9-]/g, '');
+      let newValue = '';
+      if (raw) {
+        if (raw === '-') {
+          newValue = '-';
+        } else {
+          newValue = Number(raw).toLocaleString('ko-KR');
+        }
+      }
+
+      el.value = newValue;
+
+      // Restore cursor position
+      let newCursorPos = 0;
+      let rawCount = 0;
+      for (let i = 0; i < newValue.length; i++) {
+        if (rawCount === rawBeforeCursorLength) {
+          newCursorPos = i;
+          break;
+        }
+        if (/[0-9-]/.test(newValue[i])) {
+          rawCount++;
+        }
+      }
+      if (rawCount === rawBeforeCursorLength) {
+        newCursorPos = newValue.length;
+      }
+
+      el.setSelectionRange(newCursorPos, newCursorPos);
     });
   }
 
@@ -2126,6 +2207,14 @@ function openAddFixedExpenseModal() {
       <input type="number" id="modal-fe-amount" class="form-control" placeholder="0">
     </div>
     <div class="form-group">
+      <label>출금처</label>
+      <input type="text" id="modal-fe-bank" class="form-control" placeholder="예: 토스, 신한은행">
+    </div>
+    <div class="form-group">
+      <label>입금처</label>
+      <input type="text" id="modal-fe-deposit" class="form-control" placeholder="예: 국민은행, 관리사무소">
+    </div>
+    <div class="form-group">
       <label>이체일자</label>
       <input type="text" id="modal-fe-day" class="form-control" placeholder="예: 10일, 26일, 수기">
     </div>
@@ -2157,6 +2246,8 @@ function openAddFixedExpenseModal() {
     const name = document.getElementById('modal-fe-name').value.trim();
     const amount = Number(document.getElementById('modal-fe-amount').value) || 0;
     const actualMarch = amount; // Merged with amount
+    const bank = document.getElementById('modal-fe-bank').value.trim();
+    const deposit = document.getElementById('modal-fe-deposit').value.trim();
     const day = document.getElementById('modal-fe-day').value.trim();
     const method = document.getElementById('modal-fe-method').value;
     const category = document.getElementById('modal-fe-category').value;
@@ -2170,6 +2261,8 @@ function openAddFixedExpenseModal() {
       name,
       amount,
       actualMarch,
+      bank,
+      deposit,
       day,
       method,
       category,
@@ -2587,40 +2680,7 @@ function renderSavingsProjection() {
 }
 
 // Snapshot Monthly Records
-function saveMonthlySnapshot() {
-  const calcs = calculateTotals();
-  const month = appState.currentMonth || '2026-03';
 
-  const existingIdx = appState.monthlyHistory.findIndex(h => h.month === month);
-  const record = {
-    month: month,
-    totalIncome: calcs.totalIncome,
-    totalExpenses: calcs.totalExpenses,
-    fixedExpenses: calcs.fixedExpenseActualTotal,
-    remaining: calcs.remainingBalance,
-    savings: calcs.totalSavings
-  };
-
-  if (existingIdx !== -1) {
-    appState.monthlyHistory[existingIdx] = record;
-  } else {
-    appState.monthlyHistory.push(record);
-  }
-
-  // Sort history chronologically
-  appState.monthlyHistory.sort((a, b) => a.month.localeCompare(b.month));
-
-  saveState();
-  showToast(`${month} 월 기록 마감이 저장되었습니다! 추이 차트에서 확인하세요.`);
-}
-
-function deleteHistoryRow(index) {
-  if (confirm('선택한 월별 기록을 삭제하시겠습니까?')) {
-    appState.monthlyHistory.splice(index, 1);
-    saveState();
-    showToast('월별 기록이 삭제되었습니다.');
-  }
-}
 
 // Utility Functions
 function formatKRW(num) {
