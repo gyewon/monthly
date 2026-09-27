@@ -836,7 +836,7 @@ function renderFixedExpensesTable() {
   const pct = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
   const completionElem = document.getElementById('fixed-stat-completion');
   if (completionElem) {
-    completionElem.innerText = `${paidCount} / ${totalCount} (${pct}%)`;
+    completionElem.innerHTML = `${paidCount} / ${totalCount} (<strong style="font-weight:900;">${pct}%</strong>)`;
   }
   
   drawFixedCharts(catData, methodData, fixedRemaining);
@@ -863,8 +863,12 @@ function drawFixedCharts(catData, methodData, fixedRemaining) {
         const pct = total > 0 ? Math.round((value / total) * 100) : 0;
         let formattedVal = value.toLocaleString();
         const isHidden = !chart.getDataVisibility(i);
+        
+        const map = {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵','%':'%'};
+        const boldPct = `${pct}%`.split('').map(c => map[c] || c).join('');
+        
         return {
-          text: `${label} ${pct}% (${formattedVal}원)`,
+          text: `${label} ${boldPct} (${formattedVal}원)`,
           fillStyle: dataset.backgroundColor[i],
           hidden: isHidden,
           index: i,
