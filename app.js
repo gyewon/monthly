@@ -827,20 +827,28 @@ function renderFixedExpensesTable() {
     .filter(item => (item.category || '').includes('생활비'))
     .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
 
-  const FLEXIBLE_LIVING_BUDGET = 1000000;
+  const FLEXIBLE_LIVING_BUDGET = appState.flexibleLivingBudget !== undefined ? Number(appState.flexibleLivingBudget) : 1000000;
+  const flexBudgetElem = document.getElementById('fixed-stat-flexible-budget');
+  if (flexBudgetElem) flexBudgetElem.innerText = formatKRW(FLEXIBLE_LIVING_BUDGET);
   const fixedExpenseBudget = livingBudget - FLEXIBLE_LIVING_BUDGET;
   const fixedRemaining = fixedExpenseBudget - paidSum;
 
   const livingBudgetElem = document.getElementById('fixed-stat-living-budget');
   const fixedBudgetElem = document.getElementById('fixed-stat-fixed-budget');
   const livingRemainElem = document.getElementById('fixed-stat-remaining');
+  const dashLivingRemainElem = document.getElementById('dash-fixed-stat-remaining');
   
   if (livingBudgetElem) livingBudgetElem.innerText = formatKRW(livingBudget);
   if (fixedBudgetElem) fixedBudgetElem.innerText = formatKRW(fixedExpenseBudget);
-
+  
   if (livingRemainElem) {
     livingRemainElem.innerText = formatKRW(fixedRemaining);
     livingRemainElem.className = `value ${fixedRemaining < 0 ? 'text-danger' : 'text-success'}`;
+  }
+  
+  if (dashLivingRemainElem) {
+    dashLivingRemainElem.innerText = formatKRW(fixedRemaining);
+    dashLivingRemainElem.style.color = fixedRemaining < 0 ? 'var(--danger-color)' : 'var(--success-color)';
   }
 
   const totalCount = filtered.length;
@@ -850,6 +858,48 @@ function renderFixedExpensesTable() {
     completionElem.innerHTML = `${paidCount} / ${totalCount} (<strong style="font-weight:900;">${pct}%</strong>)`;
   }
   
+  const dateReqs = {};
+  filtered.forEach(item => {
+    let day = item.day || '수기/미지정';
+    if (!day.includes('일') && day !== '수기' && day !== '수기/미지정') day += '일';
+    if (!dateReqs[day]) dateReqs[day] = { total: 0, remain: 0 };
+    dateReqs[day].total += (Number(item.amount) || 0);
+    if (!item.isPaid) {
+      dateReqs[day].remain += (Number(item.amount) || 0);
+    }
+  });
+
+  const reqContainer = document.getElementById('fixed-date-requirements');
+  if (reqContainer) {
+    reqContainer.innerHTML = '';
+    const sortedDays = Object.keys(dateReqs).sort((a, b) => (parseInt(a) || 99) - (parseInt(b) || 99));
+    
+    if (sortedDays.length === 0) {
+      reqContainer.innerHTML = '<div class="text-muted" style="text-align:center; margin-top:40px;">예정된 항목이 없습니다.</div>';
+    } else {
+      let runningBalance = fixedExpenseBudget; // 초기 예산 통장 잔고
+      sortedDays.forEach(d => {
+        const stats = dateReqs[d];
+        runningBalance -= stats.total; // 해당 일자 출금액 차감
+        
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.alignItems = 'center';
+        row.style.padding = '8px 0';
+        row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+        row.innerHTML = `
+          <span style="font-weight:600;">${d}</span> 
+          <div style="text-align:right; line-height:1.2;">
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:2px;">출금 예정: ${formatKRW(stats.total)}</div>
+            <strong class="${runningBalance < 0 ? 'text-danger' : 'text-primary'}">잔액: ${formatKRW(runningBalance)}</strong>
+          </div>
+        `;
+        reqContainer.appendChild(row);
+      });
+    }
+  }
+
   drawFixedCharts(catData, methodData, fixedRemaining);
 }
 
@@ -1550,6 +1600,20 @@ function toggleAllocPaid(person, itemId, isPaid) {
   }
 }
 
+window.editFlexibleBudget = function() {
+  const currentVal = appState.flexibleLivingBudget !== undefined ? Number(appState.flexibleLivingBudget) : 1000000;
+  const newVal = prompt("유동 생활비(목표 예산)를 입력하세요 (숫자만 입력):", currentVal);
+  if (newVal !== null) {
+    const num = Number(newVal.replace(/[^0-9-]/g, ''));
+    if (!isNaN(num)) {
+      appState.flexibleLivingBudget = num;
+      saveState();
+      renderAll();
+    } else {
+      alert("올바른 숫자를 입력해주세요.");
+    }
+  }
+};
 function toggleIncomePaid(itemId, isPaid) {
   const item = appState.incomes.find(i => i.id === itemId);
   if (item) {

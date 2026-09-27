@@ -181,8 +181,12 @@
           </div>
 
           <div class="card-box">
-            <div class="card-box-header">
-              <h3><i class="fa-solid fa-tag"></i> 고정지출 카테고리별 비중</h3>
+            <div class="card-box-header mb-2" style="justify-content: space-between; display: flex; align-items: center;">
+              <h3 style="margin: 0;"><i class="fa-solid fa-tag"></i> 고정지출 현황</h3>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 12px 15px; border-radius: 8px; margin-bottom: 15px;">
+              <span style="font-size: 0.95rem; color: #94a3b8; font-weight:600;">남은 예산</span>
+              <strong id="dash-fixed-stat-remaining" style="font-size: 1.25rem; color: #10b981;">0원</strong>
             </div>
             <div id="fixed-category-summary" class="payment-method-grid mb-3">
               <!-- Dynamically Populated -->
@@ -408,8 +412,8 @@
               <span class="value" id="fixed-stat-living-budget">0 원</span>
             </div>
             <div class="stat-pill">
-              <span class="label">유동 생활비:</span>
-              <span class="value text-warning">1,000,000 원</span>
+              <span class="label" title="클릭하여 목표 예산 수정" style="cursor:pointer;" onclick="editFlexibleBudget()">유동 생활비 <i class="fa-solid fa-pen" style="font-size:0.75rem; margin-left:4px;"></i> :</span>
+              <span class="value text-warning" id="fixed-stat-flexible-budget">1,000,000 원</span>
             </div>
             <div class="stat-pill">
               <span class="label">고정비 예산:</span>
@@ -430,7 +434,13 @@
           </div>
 
           <!-- Charts for Category & Payment Method -->
-          <div class="grid-2-col" style="margin-bottom: 20px;">
+          <div class="grid-3-col" style="margin-bottom: 20px;">
+            <div class="card-box" style="padding: 16px; margin-bottom: 0; display:flex; flex-direction:column;">
+              <h4 style="font-size:14px; text-align:center; margin-bottom:10px; color:var(--text-color); font-weight:700;">일자별 예상 통장 잔액</h4>
+              <div id="fixed-date-requirements" style="flex:1; overflow-y: auto; padding-right: 5px; font-size: 0.95rem;">
+                <!-- Dynamically Populated -->
+              </div>
+            </div>
             <div class="card-box" style="padding: 16px; margin-bottom: 0;">
               <h4 style="font-size:14px; text-align:center; margin-bottom:10px; color:var(--text-color); font-weight:700;">카테고리별 비중</h4>
               <canvas id="fixedTabCategoryChart" style="max-height: 220px;"></canvas>
