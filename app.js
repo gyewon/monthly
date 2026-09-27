@@ -860,13 +860,11 @@ function renderFixedExpensesTable() {
   
   const dateReqs = {};
   filtered.forEach(item => {
+    if (!item.isPaid) return; // [표시/완료] 체크된 항목만 집계
     let day = item.day || '수기/미지정';
     if (!day.includes('일') && day !== '수기' && day !== '수기/미지정') day += '일';
-    if (!dateReqs[day]) dateReqs[day] = { total: 0, remain: 0 };
-    dateReqs[day].total += (Number(item.amount) || 0);
-    if (!item.isPaid) {
-      dateReqs[day].remain += (Number(item.amount) || 0);
-    }
+    if (!dateReqs[day]) dateReqs[day] = { paid: 0 };
+    dateReqs[day].paid += (Number(item.amount) || 0);
   });
 
   const reqContainer = document.getElementById('fixed-date-requirements');
@@ -875,12 +873,12 @@ function renderFixedExpensesTable() {
     const sortedDays = Object.keys(dateReqs).sort((a, b) => (parseInt(a) || 99) - (parseInt(b) || 99));
     
     if (sortedDays.length === 0) {
-      reqContainer.innerHTML = '<div class="text-muted" style="text-align:center; margin-top:40px;">예정된 항목이 없습니다.</div>';
+      reqContainer.innerHTML = '<div class="text-muted" style="text-align:center; margin-top:40px;">완료된 결제 내역이 없습니다.</div>';
     } else {
-      let runningBalance = fixedExpenseBudget; // 초기 예산 통장 잔고
+      let runningBalance = fixedExpenseBudget; // 전체 예산에서 시작
       sortedDays.forEach(d => {
         const stats = dateReqs[d];
-        runningBalance -= stats.total; // 해당 일자 출금액 차감
+        runningBalance -= stats.paid; // 완료된 금액 차감
         
         const row = document.createElement('div');
         row.style.display = 'flex';
@@ -891,8 +889,10 @@ function renderFixedExpensesTable() {
         row.innerHTML = `
           <span style="font-weight:600;">${d}</span> 
           <div style="text-align:right; line-height:1.2;">
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:2px;">출금 예정: ${formatKRW(stats.total)}</div>
-            <strong class="${runningBalance < 0 ? 'text-danger' : 'text-primary'}">잔액: ${formatKRW(runningBalance)}</strong>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:2px;">
+              실제 출금: ${formatKRW(stats.paid)}
+            </div>
+            <strong class="${runningBalance < 0 ? 'text-danger' : 'text-primary'}">남은 예산: ${formatKRW(runningBalance)}</strong>
           </div>
         `;
         reqContainer.appendChild(row);
