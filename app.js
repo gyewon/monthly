@@ -61,7 +61,8 @@ const DEFAULT_EXCEL_DATA = {
     { month: '2026-01', totalIncome: 8450000, totalExpenses: 4050000, fixedExpenses: 1750000, remaining: 4400000, savings: 2850000 },
     { month: '2026-02', totalIncome: 8450000, totalExpenses: 4080000, fixedExpenses: 1765000, remaining: 4370000, savings: 2850000 },
     { month: '2026-03', totalIncome: 8450000, totalExpenses: 4088506, fixedExpenses: 1698448, remaining: 4361494, savings: 2850000 }
-  ]
+  ],
+  currentAssets: 0
 };
 
 let currentIncomeRecipientFilter = 'ALL';
@@ -215,6 +216,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initApp() {
   setupEventListeners();
+  
+  const savedTab = localStorage.getItem('activeTab') || 'dashboard';
+  const targetBtn = document.querySelector(`.nav-item[data-tab="${savedTab}"]`);
+  if (targetBtn) {
+    targetBtn.click();
+  }
+
   renderAll();
   syncFromSupabase();
 }
@@ -314,6 +322,10 @@ function normalizeState(state) {
     state.fixedExpenses.forEach(item => {
       if (item.bank === '계원토스') item.bank = '토스고정비';
     });
+  }
+
+  if (state.currentAssets === undefined) {
+    state.currentAssets = 0;
   }
 
   return state;
@@ -426,6 +438,8 @@ function setupEventListeners() {
       const targetTab = btn.getAttribute('data-tab');
       btn.classList.add('active');
       document.getElementById(`tab-${targetTab}`).classList.add('active');
+
+      localStorage.setItem('activeTab', targetTab);
 
       // Update Page Title
       const titles = {
@@ -2828,21 +2842,53 @@ let projectionChartInstance = null;
 
 function renderSavingsProjection() {
   const calcs = calculateTotals();
-  const allAllocs = [...(appState.allocations?.gyewon || []), ...(appState.allocations?.dongwook || [])];
+  const allAllocs = [
+    ...(appState.allocations?.gyewon || []).map(i => ({ ...i, pathStr: 'allocations.gyewon' })), 
+    ...(appState.allocations?.dongwook || []).map(i => ({ ...i, pathStr: 'allocations.dongwook' }))
+  ];
 
-  const catSavings = (appState.categories?.allocCategories) ? appState.categories.allocCategories[1] : '저축/적금';
-  const catInvest = (appState.categories?.allocCategories) ? appState.categories.allocCategories[2] : '투자/연금';
-  const catEmergency = (appState.categories?.allocCategories) ? appState.categories.allocCategories[4] : '비상금/경조사';
+  const allocCats = appState.categories?.allocCategories || ['저축/적금', '투자/연금', '비상금/경조사'];
+  
+  if (!appState.simulationCategories) {
+    appState.simulationCategories = [allocCats[1], allocCats[2], allocCats[4]].filter(Boolean);
+  }
+
+  const filterContainer = document.getElementById('simulation-category-filters');
+  if (filterContainer) {
+    filterContainer.innerHTML = '';
+    allocCats.forEach((cat) => {
+      if (!cat) return;
+      const isChecked = appState.simulationCategories.includes(cat);
+      const div = document.createElement('div');
+      div.className = 'form-check form-check-inline';
+      div.innerHTML = `
+        <input class="form-check-input" type="checkbox" id="sim-cat-${cat}" value="${cat}" ${isChecked ? 'checked' : ''}>
+        <label class="form-check-label" for="sim-cat-${cat}" style="color:var(--text-color); cursor:pointer; margin-left: 5px;">
+          <span class="badge ${getAllocCategoryBadgeClass(cat)}">${cat}</span>
+        </label>
+      `;
+      const cb = div.querySelector('input');
+      cb.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          appState.simulationCategories.push(cat);
+        } else {
+          appState.simulationCategories = appState.simulationCategories.filter(c => c !== cat);
+        }
+        saveState(); // this will trigger renderAll -> renderSavingsProjection
+      });
+      filterContainer.appendChild(div);
+    });
+  }
 
   // Gather items by category
-  const savingsItems = allAllocs.filter(i => i.category === catSavings);
-  const investItems = allAllocs.filter(i => i.category === catInvest);
-  const emergencyItems = allAllocs.filter(i => i.category === catEmergency);
+  const allItems = allAllocs
+    .filter(i => appState.simulationCategories.includes(i.category))
+    .map(i => ({ ...i, catLabel: i.category }));
 
-  const monthlySavings = calcs.pureSavings;
-  const monthlyInvest = calcs.pureInvestment;
-  const monthlyEmergency = calcs.pureEmergency;
-  const monthlyTotal = monthlySavings + monthlyInvest + monthlyEmergency;
+  const monthlySavings = allItems.filter(i => i.category === allocCats[1]).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  const monthlyInvest = allItems.filter(i => i.category === allocCats[2]).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  const monthlyEmergency = allItems.filter(i => i.category === allocCats[4]).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  const monthlyTotal = allItems.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
 
   // Update KPI
   const simSavingsEl = document.getElementById('sim-monthly-savings');
@@ -2858,21 +2904,46 @@ function renderSavingsProjection() {
   const detailTbody = document.querySelector('#table-savings-detail tbody');
   if (detailTbody) {
     detailTbody.innerHTML = '';
-    const allItems = [
-      ...savingsItems.map(i => ({ ...i, catLabel: catSavings })),
-      ...investItems.map(i => ({ ...i, catLabel: catInvest })),
-      ...emergencyItems.map(i => ({ ...i, catLabel: catEmergency }))
-    ];
 
+    const targetDateInput = document.getElementById('simulation-target-date');
+    let targetDateStr = targetDateInput ? targetDateInput.value : '';
+    const baseMonthStr = appState.currentMonth || '2026-03';
+    const [baseY, baseM] = baseMonthStr.split('-').map(Number);
+    
+    if (!targetDateStr) {
+      const nextY = baseY + Math.floor((baseM + 12 - 1) / 12);
+      const nextM = ((baseM + 12 - 1) % 12) + 1;
+      targetDateStr = `${nextY}-${String(nextM).padStart(2, '0')}`;
+      if (targetDateInput) targetDateInput.value = targetDateStr;
+    }
+    
+    const [targetY, targetM] = targetDateStr.split('-').map(Number);
+    let monthsDiff = (targetY - baseY) * 12 + (targetM - baseM);
+    if (monthsDiff < 0) monthsDiff = 0;
+    
+    const simTableLabel = document.getElementById('sim-table-target-label');
+    if (simTableLabel) simTableLabel.innerText = `${targetY}년 ${targetM}월`;
+
+    const simTargetLabel = document.getElementById('sim-target-date-label');
+    if (simTargetLabel) simTargetLabel.innerText = `${targetY}년 ${targetM}월`;
+
+    let currentAssets = 0;
     allItems.forEach(item => {
       const amt = Number(item.amount) || 0;
+      const currentBal = Number(item.currentBalance) || 0;
+      currentAssets += currentBal;
+
+      const dateText = item.currentBalanceDate || '-';
+      const dayText = item.day && item.day !== '-' ? item.day : '-';
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${item.name}</td>
+        <td style="text-align:center;"><span class="text-muted" style="font-size:0.9em; font-weight:600;">${dayText}</span></td>
         <td><span class="badge ${getAllocCategoryBadgeClass(item.catLabel)}">${item.catLabel}</span></td>
+        <td class="cell-amount"><div class="editable-cell" title="클릭하여 기납입액 수정" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalance', 'number')">${formatKRW(currentBal)}</div></td>
+        <td style="text-align:center;"><div class="editable-cell text-muted" title="클릭하여 기준일자 입력 (예: 2024.05)" style="font-size: 0.85rem;" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalanceDate', 'text')">${dateText}</div></td>
         <td class="cell-amount">${formatKRW(amt)}</td>
-        <td class="cell-amount">${formatKRW(amt * 6)}</td>
-        <td class="cell-amount" style="font-weight:700; color:var(--accent-primary);">${formatKRW(amt * 12)}</td>
+        <td class="cell-amount" style="font-weight:700; color:var(--accent-primary);">${formatKRW(amt * monthsDiff + currentBal)}</td>
       `;
       detailTbody.appendChild(tr);
     });
@@ -2883,13 +2954,37 @@ function renderSavingsProjection() {
       totalTr.style.borderTop = '2px solid var(--border-color)';
       totalTr.style.fontWeight = '700';
       totalTr.innerHTML = `
-        <td colspan="2" style="text-align:right;">합계</td>
+        <td colspan="3" style="text-align:right;">합계</td>
+        <td class="cell-amount">${formatKRW(currentAssets)}</td>
+        <td></td>
         <td class="cell-amount">${formatKRW(monthlyTotal)}</td>
-        <td class="cell-amount">${formatKRW(monthlyTotal * 6)}</td>
-        <td class="cell-amount" style="color:var(--accent-primary);">${formatKRW(monthlyTotal * 12)}</td>
+        <td class="cell-amount" style="color:var(--accent-primary);">${formatKRW(monthlyTotal * monthsDiff + currentAssets)}</td>
       `;
       detailTbody.appendChild(totalTr);
     }
+  }
+
+  const currentAssets = allItems.reduce((sum, item) => sum + (Number(item.currentBalance) || 0), 0);
+  
+  // Re-calculate target date here again for KPI and Chart
+  const targetDateInputOut = document.getElementById('simulation-target-date');
+  let targetDateStrOut = targetDateInputOut ? targetDateInputOut.value : '';
+  const baseMonthStrOut = appState.currentMonth || '2026-03';
+  const [baseYOut, baseMOut] = baseMonthStrOut.split('-').map(Number);
+  
+  if (!targetDateStrOut) {
+    const nextY = baseYOut + Math.floor((baseMOut + 12 - 1) / 12);
+    const nextM = ((baseMOut + 12 - 1) % 12) + 1;
+    targetDateStrOut = `${nextY}-${String(nextM).padStart(2, '0')}`;
+  }
+  const [targetYOut, targetMOut] = targetDateStrOut.split('-').map(Number);
+  let monthsDiffOut = (targetYOut - baseYOut) * 12 + (targetMOut - baseMOut);
+  if (monthsDiffOut < 0) monthsDiffOut = 0;
+
+  const yearlyTotalExpected = (monthlyTotal * monthsDiffOut) + currentAssets;
+  const yearlyTotalEl = document.getElementById('sim-yearly-total-assets');
+  if (yearlyTotalEl) {
+    yearlyTotalEl.innerText = formatKRW(yearlyTotalExpected) + ' 원';
   }
 
   // Render Projection Chart
@@ -2903,12 +2998,13 @@ function renderSavingsProjection() {
     const emergencyData = [];
     const totalData = [];
 
-    for (let m = 1; m <= 12; m++) {
+    const maxChartMonths = Math.min(Math.max(monthsDiffOut, 1), 120); 
+    for (let m = 1; m <= maxChartMonths; m++) {
       labels.push(`${m}개월`);
       savingsData.push(monthlySavings * m);
       investData.push(monthlyInvest * m);
       emergencyData.push(monthlyEmergency * m);
-      totalData.push(monthlyTotal * m);
+      totalData.push(currentAssets + (monthlyTotal * m));
     }
 
     projectionChartInstance = new Chart(projCtx, {
@@ -2947,7 +3043,7 @@ function renderSavingsProjection() {
             pointHoverRadius: 6
           },
           {
-            label: '전체 누적',
+            label: '예상 총 자산 (현재자산 포함)',
             data: totalData,
             borderColor: '#ec4899',
             backgroundColor: 'rgba(236, 72, 153, 0.05)',

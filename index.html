@@ -484,28 +484,49 @@
         <div class="card-box mb-4">
           <div class="card-box-header flex-wrap">
             <div>
-              <h3><i class="fa-solid fa-piggy-bank"></i> 적금 및 투자 연간 시뮬레이션</h3>
-              <p class="text-muted">현재 수입배분 기준으로 1년간 적금/투자 적립 예상 금액을 확인합니다.</p>
+              <h3><i class="fa-solid fa-piggy-bank"></i> 자산 달성 시뮬레이션</h3>
+              <p class="text-muted">목표 시점(연/월)을 설정하면, 현재 기납입액과 월 납입액을 바탕으로 예상 자산을 계산합니다.</p>
+            </div>
+            <div class="flex-gap-2 align-items-center" style="background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+              <label for="simulation-target-date" style="font-weight: 600; font-size: 0.95rem; margin-right: 5px;"><i class="fa-solid fa-calendar-check"></i> 목표 시점:</label>
+              <input type="month" id="simulation-target-date" class="form-control form-control-sm" style="width: 140px; font-weight: 700; color: var(--accent-primary);" onchange="renderSavingsProjection()">
+            </div>
+          </div>
+
+          <!-- Category Filters for Simulation -->
+          <div class="mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px 15px;">
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 10px; font-weight: 600;">
+              <i class="fa-solid fa-filter"></i> 시뮬레이션에 포함할 수입배분 카테고리 선택
+            </div>
+            <div id="simulation-category-filters" style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <!-- Dynamically Populated in JS -->
             </div>
           </div>
 
           <!-- Simulation KPI Summary -->
-          <div class="fixed-stats-summary mb-3">
-            <div class="stat-pill">
-              <span class="label">월 저축/적금:</span>
-              <span class="value text-success" id="sim-monthly-savings">0 원</span>
+          <div class="fixed-stats-summary mb-3" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 12px; padding: 15px; display: flex; flex-wrap: wrap; gap: 15px;">
+            <div style="display: flex; gap: 15px; width: 100%;">
+              <div class="stat-pill" style="flex: 1;">
+                <span class="label">월 저축/적금:</span>
+                <span class="value text-success" id="sim-monthly-savings">0 원</span>
+              </div>
+              <div class="stat-pill" style="flex: 1;">
+                <span class="label">월 투자/연금:</span>
+                <span class="value text-accent" id="sim-monthly-invest">0 원</span>
+              </div>
+              <div class="stat-pill" style="flex: 1;">
+                <span class="label">월 비상금:</span>
+                <span class="value" id="sim-monthly-emergency">0 원</span>
+              </div>
+              <div class="stat-pill" style="flex: 1.2; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 15px;">
+                <span class="label">월 합계:</span>
+                <span class="value text-primary" id="sim-monthly-total" style="font-size: 1.1rem;">0 원</span>
+              </div>
             </div>
-            <div class="stat-pill">
-              <span class="label">월 투자/연금:</span>
-              <span class="value text-accent" id="sim-monthly-invest">0 원</span>
-            </div>
-            <div class="stat-pill">
-              <span class="label">월 비상금:</span>
-              <span class="value" id="sim-monthly-emergency">0 원</span>
-            </div>
-            <div class="stat-pill">
-              <span class="label">월 합계:</span>
-              <span class="value text-primary" id="sim-monthly-total">0 원</span>
+            
+            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2);">
+              <span class="label" style="font-size: 1.1rem; color: #fff; font-weight: 600;"><i class="fa-solid fa-coins"></i> <span id="sim-target-date-label" style="color: var(--accent-primary);">1년 뒤</span> 예상 총 자산 (기납입액 포함):</span>
+              <span class="value" id="sim-yearly-total-assets" style="font-size: 1.5rem; color: var(--accent-primary); text-shadow: 0 0 10px rgba(139, 92, 246, 0.5);">0 원</span>
             </div>
           </div>
 
@@ -515,10 +536,12 @@
               <thead>
                 <tr>
                   <th>항목명</th>
+                  <th>이체일</th>
                   <th>카테고리</th>
+                  <th title="이미 납입된(모인) 금액을 입력하세요">기납입액 (현재 잔액) <i class="fa-solid fa-pen" style="font-size: 0.8rem; color: var(--text-muted);"></i></th>
+                  <th title="기납입액의 기준일자(예: 24년 5월)를 기록하세요">기준일 <i class="fa-solid fa-pen" style="font-size: 0.8rem; color: var(--text-muted);"></i></th>
                   <th>월 납입액</th>
-                  <th>6개월 누적</th>
-                  <th>12개월 누적</th>
+                  <th><span id="sim-table-target-label">예상 시점</span> 총액</th>
                 </tr>
               </thead>
               <tbody></tbody>
