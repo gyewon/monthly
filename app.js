@@ -2590,7 +2590,8 @@ function renderCharts() {
   if (pmCtx) {
     const pmMap = {};
     appState.fixedExpenses.forEach(item => {
-      const pm = item.method || '기타';
+      let pm = item.method || '기타';
+      pm = pm.split('_')[0].split('(')[0].trim();
       pmMap[pm] = (pmMap[pm] || 0) + Number(item.amount || 0);
     });
 
