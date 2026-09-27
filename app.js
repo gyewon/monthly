@@ -640,6 +640,7 @@ function getFixedCategoryHTML(category) {
   else if (category.includes('\ud578\ub4dc\ud3f0') || category.includes('\ud1b5\uc2e0')) emoji = '\ud83d\udcf1';
   else if (category.includes('\uc8fc\uac70') || category.includes('\uad00\ub9ac\ube44')) emoji = '\ud83c\udfe0';
   else if (category.includes('\uad50\ud1b5')) emoji = '\ud83d\ude8c';
+  else if (category.includes('현금') || category.includes('\ud604\uae08')) emoji = '💰';
 
   return `<span style="display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:13px; color:#f8fafc; background-color:rgba(255,255,255,0.08); padding:5px 12px; border-radius:12px; cursor:pointer;"><span style="font-size:17px;">${emoji}</span> ${category}</span>`;
 }
