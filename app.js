@@ -169,6 +169,9 @@ function renderIncomeTables() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td style="text-align:center;">
+        <input type="checkbox" ${inc.isPaid ? 'checked' : ''} onchange="toggleIncomePaid('${inc.id}', this.checked)" style="transform: scale(1.2); cursor:pointer;">
+      </td>
       <td><span class="badge ${badgeClass}">${personLabel}</span></td>
       <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineCategory(this, '${inc.id}', event)"><span class="badge ${getCategoryBadgeClass(categoryName)}" style="font-weight:600; cursor:pointer;">${categoryName}</span></div></td>
       <td><div class="editable-cell cell-amount text-accent" title="클릭하여 월급/금액 수정" onclick="editInlineCell(this, 'incomes', '${inc.id}', 'amount', 'number')">${formatKRW(inc.amount)}</div></td>
@@ -690,6 +693,9 @@ function renderAllocationTables() {
       const catBadge = getAllocCategoryBadgeClass(item.category);
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td style="text-align:center;">
+          <input type="checkbox" ${item.isPaid ? 'checked' : ''} onchange="toggleAllocPaid('gyewon', '${item.id}', this.checked)" style="transform: scale(1.2); cursor:pointer;">
+        </td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'name')">${item.name}</div></td>
         <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
@@ -701,6 +707,7 @@ function renderAllocationTables() {
                  onclick="toggleAllocAutoTransfer('allocations.gyewon', '${item.id}')">
         </td>
         <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineAllocCategory(this, 'allocations.gyewon', '${item.id}', event)"><span class="badge ${catBadge}" style="font-weight:600; cursor:pointer;">${item.category || '기타'}</span></div></td>
+        <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.gyewon', '${item.id}', 'note')">${item.note || '-'}</div></td>
         <td><button class="btn btn-outline-danger btn-sm" onclick="deleteItem('allocations.gyewon', '${item.id}')"><i class="fa-solid fa-xmark"></i></button></td>
       `;
       tbodyG.appendChild(tr);
@@ -715,6 +722,9 @@ function renderAllocationTables() {
       const catBadge = getAllocCategoryBadgeClass(item.category);
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td style="text-align:center;">
+          <input type="checkbox" ${item.isPaid ? 'checked' : ''} onchange="toggleAllocPaid('dongwook', '${item.id}', this.checked)" style="transform: scale(1.2); cursor:pointer;">
+        </td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'name')">${item.name}</div></td>
         <td><div class="editable-cell cell-amount" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'amount', 'number')">${formatKRW(item.amount)}</div></td>
         <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'bank')">${item.bank || '-'}</div></td>
@@ -726,6 +736,7 @@ function renderAllocationTables() {
                  onclick="toggleAllocAutoTransfer('allocations.dongwook', '${item.id}')">
         </td>
         <td><div class="editable-cell" title="클릭하여 카테고리 빠른 변경" onclick="editInlineAllocCategory(this, 'allocations.dongwook', '${item.id}', event)"><span class="badge ${catBadge}" style="font-weight:600; cursor:pointer;">${item.category || '기타'}</span></div></td>
+        <td><div class="editable-cell" onclick="editInlineCell(this, 'allocations.dongwook', '${item.id}', 'note')">${item.note || '-'}</div></td>
         <td><button class="btn btn-outline-danger btn-sm" onclick="deleteItem('allocations.dongwook', '${item.id}')"><i class="fa-solid fa-xmark"></i></button></td>
       `;
       tbodyD.appendChild(tr);
@@ -775,9 +786,9 @@ function renderFixedExpensesTable() {
       paidSum += amt;
       const c = item.category || '기타';
       
-      // Normalize method name to group similar cards (e.g. '삼성카드_동욱' -> '삼성카드')
+      // Use actual method name as requested
       let m = item.method || '기타';
-      m = m.split('_')[0].split('(')[0].trim();
+      m = m.trim();
       
       catData[c] = (catData[c] || 0) + amt;
       methodData[m] = (methodData[m] || 0) + amt;
@@ -971,6 +982,7 @@ function renderTimeline() {
 
   // 1. Incomes (입금/월급)
   (appState.incomes || []).forEach(inc => {
+    if (!inc.isPaid) return;
     let rawDay = inc.day || '미지정';
     let dayKey = rawDay.includes('일') ? rawDay : (rawDay + '일');
     if (!groups[dayKey]) groups[dayKey] = [];
@@ -985,12 +997,14 @@ function renderTimeline() {
       name: `${personName} ${inc.title}`,
       method: '급여/입금',
       amount: Number(inc.amount) || 0,
-      category: inc.title
+      category: inc.title,
+      isPaid: !!inc.isPaid
     });
   });
 
   // 2. Allocations (Gyewon)
   (appState.allocations?.gyewon || []).forEach(item => {
+    if (!item.isPaid) return;
     let dayKey = '수기/기타';
     if (item.schedule && item.schedule.includes('일')) {
       const match = item.schedule.match(/(\d+일)/);
@@ -1002,12 +1016,14 @@ function renderTimeline() {
       name: `계원 ${item.name}`,
       method: item.bank || '자동이체',
       amount: Number(item.amount) || 0,
-      category: item.category
+      category: item.category,
+      isPaid: !!item.isPaid
     });
   });
 
   // 3. Allocations (Dongwook)
   (appState.allocations?.dongwook || []).forEach(item => {
+    if (!item.isPaid) return;
     let dayKey = '수기/기타';
     if (item.schedule && item.schedule.includes('일')) {
       const match = item.schedule.match(/(\d+일)/);
@@ -1019,12 +1035,14 @@ function renderTimeline() {
       name: `동욱 ${item.name}`,
       method: item.bank || '자동이체',
       amount: Number(item.amount) || 0,
-      category: item.category
+      category: item.category,
+      isPaid: !!item.isPaid
     });
   });
 
   // 4. Fixed Expenses (고정지출 이체)
   (appState.fixedExpenses || []).forEach(item => {
+    if (!item.isPaid) return;
     let rawDay = item.day || '수기/기타';
     let dayKey = (rawDay.includes('일') || rawDay === '수기' || rawDay.includes('수기')) ? rawDay : (rawDay ? rawDay + '일' : '수기/기타');
     if (!groups[dayKey]) groups[dayKey] = [];
@@ -1033,7 +1051,8 @@ function renderTimeline() {
       name: item.name,
       method: item.method || '결제수단',
       amount: Number(item.amount) || 0,
-      category: item.category
+      category: item.category,
+      isPaid: !!item.isPaid
     });
   });
 
@@ -1043,6 +1062,17 @@ function renderTimeline() {
     const numB = parseInt(b) || 99;
     return numA - numB;
   });
+
+  if (sortedKeys.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 40px 20px; color: #64748b;">
+        <i class="fa-regular fa-calendar-xmark fa-3x" style="margin-bottom:15px; opacity:0.5;"></i>
+        <p style="font-size:15px; margin:0;">표시할 일정이 없습니다.</p>
+        <p style="font-size:13px; margin-top:5px; opacity:0.8;">각 탭에서 <strong>[표시]</strong>를 체크한 항목만 이곳에 나타납니다.</p>
+      </div>
+    `;
+    return;
+  }
 
   sortedKeys.forEach(day => {
     const items = groups[day];
@@ -1110,7 +1140,7 @@ function renderPaymentMethodSummary() {
   let totalFixed = 0;
   appState.fixedExpenses.forEach(item => {
     let method = item.method || '기타';
-    method = method.split('_')[0].split('(')[0].trim();
+    method = method.trim();
     const amt = Number(item.amount) || 0;
     pmMap[method] = (pmMap[method] || 0) + amt;
     totalFixed += amt;
@@ -1504,6 +1534,28 @@ function toggleFixedPaid(itemId, isPaid) {
   if (item) {
     item.isPaid = isPaid;
     saveState();
+    renderTimeline(); // Update calendar
+  }
+}
+
+function toggleAllocPaid(person, itemId, isPaid) {
+  const list = appState.allocations[person];
+  if (list) {
+    const item = list.find(i => i.id === itemId);
+    if (item) {
+      item.isPaid = isPaid;
+      saveState();
+      renderTimeline(); // Update calendar
+    }
+  }
+}
+
+function toggleIncomePaid(itemId, isPaid) {
+  const item = appState.incomes.find(i => i.id === itemId);
+  if (item) {
+    item.isPaid = isPaid;
+    saveState();
+    renderTimeline(); // Update calendar
   }
 }
 
@@ -1894,24 +1946,29 @@ window.editFixedExpenseMethod = function(element, itemId) {
 };
 
 window.openPaymentMethodManagerModal = function() {
-  document.getElementById('modal-title').innerText = '\uacb0\uc81c\uc218\ub2e8 \ubc0f \uce74\ud14c\uace0\ub9ac \uad00\ub9ac';
+  document.getElementById('modal-title').innerText = '결제수단 및 카테고리 관리';
   const body = document.getElementById('modal-body');
 
   if (!appState.categories) appState.categories = {};
   if (!appState.categories.paymentMethods) {
-    appState.categories.paymentMethods = ['\ud604\uae08', '\ud558\ub098\uce74\ub4dc', '\uc624\ube60\uce74\ub4dc(\uc0bc\uc131)', '\uc624\ube60\uce74\ub4dc', '\uc6b0\ub9ac\uce74\ub4dc', '\uc2e0\ud55c\uce74\ub4dc', '\uce74\ub4dc'];
+    appState.categories.paymentMethods = ['현금', '하나카드', '오빠카드(삼성)', '오빠카드', '우리카드', '신한카드', '카드'];
   }
   if (!appState.categories.fixedCategories) {
-    appState.categories.fixedCategories = ['\uc6a9\ub3c8', '\uacf3\ub3c8', '\uad6c\ub3c5', '\ubcf4\ud5d8', '\ud578\ub4dc\ud3f0\uc694\uae08', '\uc8fc\uac70', '\uad50\ud1b5'];
+    appState.categories.fixedCategories = ['용돈', '곳돈', '구독', '보험', '핸드폰요금', '주거', '교통'];
   }
+
+  // Use temporary state to prevent auto-saving
+  let tempPMs = [...appState.categories.paymentMethods];
+  let tempFCats = [...appState.categories.fixedCategories];
+  let tempExpenses = JSON.parse(JSON.stringify(appState.fixedExpenses || []));
 
   const renderAll = () => {
     body.innerHTML = `
       <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
-        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> \uacb0\uc81c \uc218\ub2e8</h4>
-        <p class="text-muted mb-3" style="font-size:12px;">\ub4f1\ub85d\ub41c \uacb0\uc81c \uc218\ub2e8\uc744 \uad00\ub9ac\ud569\ub2c8\ub2e4. \uc218\uc815 \uc2dc \uae30\uc874 \ud56d\ubaa9\uc5d0 \uc790\ub3d9 \ubc18\uc601\ub429\ub2c8\ub2e4.</p>
+        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> 결제 수단</h4>
+        <p class="text-muted mb-3" style="font-size:12px;">등록된 결제 수단을 관리합니다. 수정 시 기존 항목에 자동 반영됩니다.</p>
         <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;">
-          ${(appState.categories.paymentMethods || []).map((pm, idx) => `
+          ${tempPMs.map((pm, idx) => `
             <span style="display:inline-flex; align-items:center; gap:8px;">
               ${getPaymentMethodHTML(pm)}
               <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" onclick="editPMInModal(${idx})"></i>
@@ -1920,16 +1977,16 @@ window.openPaymentMethodManagerModal = function() {
           `).join('')}
         </div>
         <div class="flex-gap-2">
-          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="\uc0c8 \uacb0\uc81c\uc218\ub2e8 (\uc608: \uc2e0\ud55c\uce74\ub4dc, \uce74\uce74\uc624\ud398\uc774)">
-          <button class="btn btn-primary btn-sm" onclick="addPaymentMethodFromModal()"><i class="fa-solid fa-plus"></i> \ucd94\uac00</button>
+          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="새 결제수단 (예: 신한카드, 카카오페이)">
+          <button class="btn btn-primary btn-sm" onclick="addPaymentMethodFromModal()"><i class="fa-solid fa-plus"></i> 추가</button>
         </div>
       </div>
 
       <div class="card-box" style="padding: 16px; background: rgba(0,0,0,0.2);">
-        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-tag"></i> \uace0\uc815\uc9c0\ucd9c \uce74\ud14c\uace0\ub9ac</h4>
-        <p class="text-muted mb-3" style="font-size:12px;">\uace0\uc815\uc9c0\ucd9c \ud56d\ubaa9\uc758 \uce74\ud14c\uace0\ub9ac\ub97c \uad00\ub9ac\ud569\ub2c8\ub2e4.</p>
+        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-tag"></i> 고정지출 카테고리</h4>
+        <p class="text-muted mb-3" style="font-size:12px;">고정지출 항목의 카테고리를 관리합니다.</p>
         <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;">
-          ${(appState.categories.fixedCategories || []).map((cat, idx) => `
+          ${tempFCats.map((cat, idx) => `
             <span style="display:inline-flex; align-items:center; gap:8px;">
               ${getFixedCategoryHTML(cat)}
               <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" onclick="editFCatInModal(${idx})"></i>
@@ -1938,8 +1995,8 @@ window.openPaymentMethodManagerModal = function() {
           `).join('')}
         </div>
         <div class="flex-gap-2">
-          <input type="text" id="new-fcat-modal-input" class="form-control form-control-sm" placeholder="\uc0c8 \uce74\ud14c\uace0\ub9ac (\uc608: \ud1b5\uc2e0\ube44, \uad50\uc721, \uc6b4\ub3d9)">
-          <button class="btn btn-primary btn-sm" onclick="addFCatFromModal()"><i class="fa-solid fa-plus"></i> \ucd94\uac00</button>
+          <input type="text" id="new-fcat-modal-input" class="form-control form-control-sm" placeholder="새 카테고리 (예: 통신비, 교육, 운동)">
+          <button class="btn btn-primary btn-sm" onclick="addFCatFromModal()"><i class="fa-solid fa-plus"></i> 추가</button>
         </div>
       </div>
     `;
@@ -1949,53 +2006,74 @@ window.openPaymentMethodManagerModal = function() {
     const input = document.getElementById('new-pm-modal-input');
     if (!input) return;
     const val = input.value.trim();
-    if (val && !appState.categories.paymentMethods.includes(val)) {
-      appState.categories.paymentMethods.push(val);
-      saveState(); updateMethodFilterDropdown(); renderAll();
+    if (val && !tempPMs.includes(val)) {
+      tempPMs.push(val); renderAll();
     }
   };
   window.addFCatFromModal = function() {
     const input = document.getElementById('new-fcat-modal-input');
     if (!input) return;
     const val = input.value.trim();
-    if (val && !appState.categories.fixedCategories.includes(val)) {
-      appState.categories.fixedCategories.push(val);
-      saveState(); renderAll();
+    if (val && !tempFCats.includes(val)) {
+      tempFCats.push(val); renderAll();
     }
   };
   window.editPMInModal = function(idx) {
-    const oldVal = appState.categories.paymentMethods[idx];
-    const newVal = prompt('\uacb0\uc81c \uc218\ub2e8 \uc774\ub984\uc744 \uc218\uc815\ud558\uc138\uc694:', oldVal);
+    const oldVal = tempPMs[idx];
+    const newVal = prompt('결제 수단 이름을 수정하세요:', oldVal);
     if (newVal && newVal.trim() !== '' && newVal.trim() !== oldVal) {
       const trimmed = newVal.trim();
-      appState.categories.paymentMethods[idx] = trimmed;
-      (appState.fixedExpenses || []).forEach(item => { if (item.method === oldVal) item.method = trimmed; });
-      saveState(); renderFixedExpensesTable(); updateMethodFilterDropdown(); renderAll();
+      tempPMs[idx] = trimmed;
+      tempExpenses.forEach(item => { if (item.method === oldVal) item.method = trimmed; });
+      renderAll();
     }
   };
   window.deletePMInModal = function(idx) {
-    if ((appState.categories.paymentMethods || []).length <= 1) { alert('\ucd5c\uc18c 1\uac1c \uc774\uc0c1 \ud544\uc694'); return; }
-    appState.categories.paymentMethods.splice(idx, 1);
-    saveState(); renderFixedExpensesTable(); updateMethodFilterDropdown(); renderAll();
+    if (tempPMs.length <= 1) { alert('최소 1개 이상 필요'); return; }
+    const oldVal = tempPMs[idx];
+    const inUse = tempExpenses.some(item => item.method === oldVal);
+    if (inUse) {
+      alert('이 결제수단이 지정된 지출 내역이 있어 삭제할 수 없습니다.');
+      return;
+    }
+    tempPMs.splice(idx, 1);
+    renderAll();
   };
   window.editFCatInModal = function(idx) {
-    const oldVal = appState.categories.fixedCategories[idx];
-    const newVal = prompt('\uce74\ud14c\uace0\ub9ac \uc774\ub984\uc744 \uc218\uc815\ud558\uc138\uc694:', oldVal);
+    const oldVal = tempFCats[idx];
+    const newVal = prompt('카테고리 이름을 수정하세요:', oldVal);
     if (newVal && newVal.trim() !== '' && newVal.trim() !== oldVal) {
       const trimmed = newVal.trim();
-      appState.categories.fixedCategories[idx] = trimmed;
-      (appState.fixedExpenses || []).forEach(item => { if (item.category === oldVal) item.category = trimmed; });
-      saveState(); renderFixedExpensesTable(); renderAll();
+      tempFCats[idx] = trimmed;
+      tempExpenses.forEach(item => { if (item.category === oldVal) item.category = trimmed; });
+      renderAll();
     }
   };
   window.deleteFCatInModal = function(idx) {
-    if ((appState.categories.fixedCategories || []).length <= 1) { alert('\ucd5c\uc18c 1\uac1c \uc774\uc0c1 \ud544\uc694'); return; }
-    appState.categories.fixedCategories.splice(idx, 1);
-    saveState(); renderFixedExpensesTable(); renderAll();
+    if (tempFCats.length <= 1) { alert('최소 1개 이상 필요'); return; }
+    const oldVal = tempFCats[idx];
+    const inUse = tempExpenses.some(item => item.category === oldVal);
+    if (inUse) {
+      alert('이 카테고리가 지정된 지출 내역이 있어 삭제할 수 없습니다.');
+      return;
+    }
+    tempFCats.splice(idx, 1);
+    renderAll();
   };
 
   renderAll();
-  document.getElementById('modal-save-btn').onclick = () => { closeModal(); };
+
+  // Save changes only when modal save button is clicked
+  document.getElementById('modal-save-btn').onclick = () => {
+    appState.categories.paymentMethods = tempPMs;
+    appState.categories.fixedCategories = tempFCats;
+    appState.fixedExpenses = tempExpenses;
+    saveState();
+    renderFixedExpensesTable();
+    updateMethodFilterDropdown();
+    closeModal();
+  };
+  
   document.getElementById('item-modal').classList.add('active');
 };
 
@@ -2595,7 +2673,7 @@ function renderCharts() {
     const pmMap = {};
     appState.fixedExpenses.forEach(item => {
       let pm = item.method || '기타';
-      pm = pm.split('_')[0].split('(')[0].trim();
+      pm = pm.trim();
       pmMap[pm] = (pmMap[pm] || 0) + Number(item.amount || 0);
     });
 

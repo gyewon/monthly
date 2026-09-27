@@ -232,6 +232,7 @@
             <table class="table table-editable" id="table-income-unified">
               <thead>
                 <tr>
+                  <th style="width:45px;" title="달력(타임라인)에 표시">표시</th>
                   <th>수입 대상</th>
                   <th>수입 카테고리</th>
                   <th>금액 (원)</th>
@@ -281,6 +282,7 @@
               <table class="table table-editable" id="table-alloc-gyewon">
                 <thead>
                   <tr>
+                    <th style="width:45px;" title="달력(타임라인)에 표시">표시</th>
                     <th>항목명</th>
                     <th>금액 (원)</th>
                     <th>출금</th>
@@ -288,6 +290,7 @@
                     <th>이체일자</th>
                     <th>자동이체</th>
                     <th style="cursor:pointer;" onclick="sortAllocations('gyewon', 'category')" title="카테고리 기준으로 정렬">카테고리 <i class="fa-solid fa-sort"></i></th>
+                    <th>비고</th>
                     <th style="width:40px;"></th>
                   </tr>
                 </thead>
@@ -318,6 +321,7 @@
               <table class="table table-editable" id="table-alloc-dongwook">
                 <thead>
                   <tr>
+                    <th style="width:45px;" title="달력(타임라인)에 표시">표시</th>
                     <th>항목명</th>
                     <th>금액 (원)</th>
                     <th>출금</th>
@@ -325,6 +329,7 @@
                     <th>이체일자</th>
                     <th>자동이체</th>
                     <th style="cursor:pointer;" onclick="sortAllocations('dongwook', 'category')" title="카테고리 기준으로 정렬">카테고리 <i class="fa-solid fa-sort"></i></th>
+                    <th>비고</th>
                     <th style="width:40px;"></th>
                   </tr>
                 </thead>
@@ -341,7 +346,7 @@
           <div class="card-box-header flex-wrap">
             <div>
               <h3><i class="fa-solid fa-receipt"></i> 매월 고정지출 상세 리스트</h3>
-              <p class="text-muted">셀을 클릭하여 직접 수정하거나 납부 여부를 체크하세요.</p>
+              <p class="text-muted">셀을 클릭하여 직접 수정하거나 달력(타임라인) 표시 여부를 체크하세요.</p>
             </div>
             <div class="flex-gap-2">
               <button class="btn btn-primary btn-sm" id="btn-add-fixed-expense">
@@ -441,7 +446,7 @@
             <table class="table table-editable" id="table-fixed-expenses">
               <thead>
                 <tr>
-                  <th style="width:45px;">완료</th>
+                  <th style="width:45px;" title="달력(타임라인)에 표시">표시</th>
                   <th>항목명</th>
                   <th>금액(원)</th>
                   <th>출금처</th>
