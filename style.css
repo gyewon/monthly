@@ -85,7 +85,7 @@ body {
 
 /* Sidebar */
 .sidebar {
-  width: 260px;
+  width: 210px;
   background-color: var(--bg-sidebar);
   border-right: var(--glass-border);
   padding: 24px 16px;
@@ -252,7 +252,7 @@ input:checked + .slider:before { transform: translateX(16px); }
 
 /* Main Content Area */
 .main-content {
-  margin-left: 260px;
+  margin-left: 210px;
   flex-grow: 1;
   padding: 32px 40px;
   max-width: 1600px;
