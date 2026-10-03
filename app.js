@@ -649,33 +649,38 @@ function getCategoryBadgeClass(category) {
 function getPaymentMethodHTML(method) {
   if (!method || method === '-') return '<span class="text-muted">-</span>';
   
+  let company = method;
+  if (appState.categories?.paymentMethodTypes?.[method]) {
+    company = appState.categories.paymentMethodTypes[method];
+  }
+
   let logoUrl = '';
   let icon = 'fa-solid fa-credit-card';
   let color = '#94a3b8'; // gray
 
-  if (method.includes('현금')) { 
+  if (company.includes('현금')) { 
     icon = 'fa-solid fa-money-bill-wave'; color = '#10b981'; 
-  } else if (method.includes('하나')) { 
+  } else if (company.includes('하나')) { 
     logoUrl = 'https://www.google.com/s2/favicons?domain=hanacard.co.kr&sz=64'; 
-  } else if (method.includes('우리')) { 
+  } else if (company.includes('우리')) { 
     logoUrl = 'https://www.google.com/s2/favicons?domain=wooricard.com&sz=64'; 
-  } else if (method.includes('신한')) { 
+  } else if (company.includes('신한')) { 
     logoUrl = 'https://www.google.com/s2/favicons?domain=shinhancard.com&sz=64'; 
-  } else if (method.includes('삼성')) { 
+  } else if (company.includes('삼성')) { 
     logoUrl = 'https://www.google.com/s2/favicons?domain=samsung.com&sz=64'; 
-  } else if (method.includes('토스')) { 
+  } else if (company.includes('토스')) { 
     logoUrl = 'https://www.google.com/s2/favicons?domain=toss.im&sz=64'; 
-  } else if (method.includes('국민') || method.includes('KB')) {
+  } else if (company.includes('국민') || company.includes('KB')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=kbcard.com&sz=64';
-  } else if (method.includes('현대')) {
+  } else if (company.includes('현대')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=hyundaicard.com&sz=64';
-  } else if (method.includes('롯데')) {
+  } else if (company.includes('롯데')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=lottecard.co.kr&sz=64';
-  } else if (method.includes('농협') || method.includes('NH')) {
+  } else if (company.includes('농협') || company.includes('NH')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=card.nonghyup.com&sz=64';
-  } else if (method.includes('카카오')) {
+  } else if (company.includes('카카오')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=kakaobank.com&sz=64';
-  } else if (method.includes('자동이체') || method.includes('계좌')) { 
+  } else if (company.includes('자동이체') || company.includes('계좌')) { 
     icon = 'fa-solid fa-building-columns'; color = '#c084fc'; 
   }
   
@@ -2195,7 +2200,7 @@ window.openPaymentMethodManagerModal = function() {
       pmGroupsHTML += `
         <h5 style="font-size:12px; font-weight:700; color: var(--accent-primary); margin-bottom:10px;">
           <i class="fa-solid fa-layer-group"></i> ${group}
-          <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer; margin-left: 8px;" title="대분류 이름 수정" onclick="editPMGroupInModal('${group}')"></i>
+          <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer; margin-left: 8px;" title="카드사 이름 수정" onclick="editPMGroupInModal('${group}')"></i>
         </h5>
         <div class="flex-gap-2 mb-3" style="flex-wrap:wrap; min-height: 30px; padding: 5px; border: 1px dashed transparent;" 
              ondragover="onDragOverPMGroup(event)" 
@@ -2211,7 +2216,7 @@ window.openPaymentMethodManagerModal = function() {
                   ondragend="onDragEndPM(event)"
                   style="display:inline-flex; align-items:center; gap:8px; cursor:grab; padding:4px 8px; border-radius:4px; transition: background 0.2s;">
               ${getPaymentMethodHTML(pm)}
-              <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" title="대분류/소분류 수정" onclick="editPMInModal(${idx})"></i>
+              <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" title="카드사/별명 수정" onclick="editPMInModal(${idx})"></i>
               <i class="fa-solid fa-xmark text-muted" style="cursor:pointer;" onclick="deletePMInModal(${idx})"></i>
             </span>
           `;}).join('')}
@@ -2221,14 +2226,14 @@ window.openPaymentMethodManagerModal = function() {
 
     body.innerHTML = `
       <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
-        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> 결제 수단</h4>
-        <p class="text-muted mb-3" style="font-size:12px;">원하시는 대분류(예: 주거래카드)에 소분류(결제수단명)를 등록하세요.</p>
+        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> 결제 수단 (카드/계좌)</h4>
+        <p class="text-muted mb-3" style="font-size:12px;">카드사(예: 신한, 하나)를 지정하고 원하시는 카드 별명을 등록하세요.</p>
         
         ${pmGroupsHTML}
 
         <div class="flex-gap-2" style="align-items:center; margin-top:10px;">
-          <input type="text" id="new-pm-modal-type" class="form-control form-control-sm" style="width:110px;" placeholder="대분류 입력">
-          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="새 결제수단(소분류) 입력">
+          <input type="text" id="new-pm-modal-type" class="form-control form-control-sm" style="width:110px;" placeholder="카드사/은행">
+          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="새 결제수단 별명 입력">
           <button class="btn btn-primary btn-sm" onclick="addPaymentMethodFromModal()"><i class="fa-solid fa-plus"></i> 추가</button>
         </div>
       </div>
@@ -2263,7 +2268,7 @@ window.openPaymentMethodManagerModal = function() {
     const typeInput = document.getElementById('new-pm-modal-type');
     if (!input) return;
     const val = input.value.trim();
-    const typeVal = typeInput && typeInput.value.trim() ? typeInput.value.trim() : (val.includes('카드') ? '카드' : '현금/이체');
+    const typeVal = typeInput && typeInput.value.trim() ? typeInput.value.trim() : '미분류';
 
     if (val && !tempPMs.includes(val)) {
       tempPMs.push(val);
@@ -2282,7 +2287,7 @@ window.openPaymentMethodManagerModal = function() {
   };
 
   window.editPMGroupInModal = function(oldGroupName) {
-    const newGroupName = prompt('대분류 이름을 수정하세요:', oldGroupName);
+    const newGroupName = prompt('카드사/은행 이름을 수정하세요 (예: 하나, 삼성, 우리):', oldGroupName);
     if (!newGroupName || newGroupName.trim() === '' || newGroupName.trim() === oldGroupName) return;
     const trimmed = newGroupName.trim();
     
@@ -2300,24 +2305,17 @@ window.openPaymentMethodManagerModal = function() {
     const oldVal = tempPMs[idx];
     const oldType = getPMType(oldVal);
 
-    const newVal = prompt('결제 수단(소분류) 이름을 수정하세요:', oldVal);
-    if (!newVal || newVal.trim() === '') return;
-    
-    const newType = prompt('이 결제수단이 속할 대분류 이름을 수정하세요:', oldType);
-    if (!newType || newType.trim() === '') return;
+    const newVal = prompt('결제수단 별명을 수정하세요 (예: 데이트용 카드):', oldVal);
+    if (!newVal || newVal.trim() === '' || newVal.trim() === oldVal) return;
 
     const trimmed = newVal.trim();
-    const trimmedType = newType.trim();
+    const trimmedType = oldType; // Keep the same company/group
 
-    if (trimmed !== oldVal) {
-      tempPMs[idx] = trimmed;
-      tempExpenses.forEach(item => { if (item.method === oldVal) item.method = trimmed; });
-    }
+    tempPMs[idx] = trimmed;
+    tempExpenses.forEach(item => { if (item.method === oldVal) item.method = trimmed; });
     
     if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
-    if (trimmed !== oldVal) {
-      delete appState.categories.paymentMethodTypes[oldVal];
-    }
+    delete appState.categories.paymentMethodTypes[oldVal];
     appState.categories.paymentMethodTypes[trimmed] = trimmedType;
     
     renderAll();
