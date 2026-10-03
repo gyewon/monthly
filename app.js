@@ -611,7 +611,7 @@ function renderAll() {
   if (pLabelInvest) pLabelInvest.innerText = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[2] : '투자';
   if (pLabelEmergency) pLabelEmergency.innerText = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[4] : '비상금';
   
-  document.getElementById('kpi-savings-rate').innerText = `${calcs.savingsRate}%`;
+  document.getElementById('kpi-savings-rate').innerHTML = `<span style="color: var(--accent-danger);">${calcs.savingsRate}</span>%`;
 
   // Render Tables
   renderIncomeTables();
@@ -2954,7 +2954,32 @@ function renderCharts() {
         maintainAspectRatio: false,
         layout: { padding: { top: 15 } },
         plugins: {
-          legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 } } },
+          legend: { 
+            position: 'right', 
+            labels: { 
+              font: { size: 11 },
+              generateLabels: function(chart) {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map((label, i) => {
+                    const meta = chart.getDatasetMeta(0);
+                    const style = meta.controller.getStyle(i);
+                    return {
+                      text: label,
+                      fillStyle: style.backgroundColor,
+                      strokeStyle: style.borderColor,
+                      lineWidth: style.borderWidth,
+                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                      index: i,
+                      fontColor: style.backgroundColor,
+                      color: style.backgroundColor
+                    };
+                  });
+                }
+                return [];
+              }
+            } 
+          },
           tooltip: {
             callbacks: {
               label: (ctx) => `${ctx.label}`
