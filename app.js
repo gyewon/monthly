@@ -657,11 +657,12 @@ function getPaymentMethodHTML(method) {
   let logoUrl = '';
   let icon = 'fa-solid fa-credit-card';
   let color = '#94a3b8'; // gray
+  let bg = '#fff';
 
   if (company.includes('현금')) { 
     icon = 'fa-solid fa-money-bill-wave'; color = '#10b981'; 
   } else if (company.includes('하나')) { 
-    logoUrl = 'https://www.google.com/s2/favicons?domain=hanacard.co.kr&sz=64'; 
+    logoUrl = 'https://www.google.com/s2/favicons?domain=hanabank.com&sz=64'; 
   } else if (company.includes('우리')) { 
     logoUrl = 'https://www.google.com/s2/favicons?domain=wooricard.com&sz=64'; 
   } else if (company.includes('신한')) { 
@@ -671,21 +672,22 @@ function getPaymentMethodHTML(method) {
   } else if (company.includes('토스')) { 
     logoUrl = 'https://www.google.com/s2/favicons?domain=toss.im&sz=64'; 
   } else if (company.includes('국민') || company.includes('KB')) {
-    logoUrl = 'https://www.google.com/s2/favicons?domain=kbcard.com&sz=64';
+    logoUrl = 'https://www.google.com/s2/favicons?domain=kbstar.com&sz=64';
   } else if (company.includes('현대')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=hyundaicard.com&sz=64';
   } else if (company.includes('롯데')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=lottecard.co.kr&sz=64';
   } else if (company.includes('농협') || company.includes('NH')) {
-    logoUrl = 'https://www.google.com/s2/favicons?domain=card.nonghyup.com&sz=64';
+    logoUrl = 'https://www.google.com/s2/favicons?domain=nonghyup.com&sz=64';
   } else if (company.includes('카카오')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=kakaobank.com&sz=64';
+    bg = '#fee500';
   } else if (company.includes('자동이체') || company.includes('계좌')) { 
     icon = 'fa-solid fa-building-columns'; color = '#c084fc'; 
   }
   
   const iconElement = logoUrl 
-    ? `<img src="${logoUrl}" alt="${method}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; background: #fff; vertical-align: middle; box-shadow: 0 0 2px rgba(255,255,255,0.2);">` 
+    ? `<img src="${logoUrl}" alt="${method}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; background: ${bg}; vertical-align: middle; box-shadow: 0 0 2px rgba(255,255,255,0.2);">` 
     : `<i class="${icon}" style="color:${color}; font-size:16px; width:18px; text-align:center;"></i>`;
 
   return `<span style="display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:14.5px; color:#f8fafc; cursor:pointer; padding:5px 8px; border-radius:6px; background-color:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">${iconElement} ${method}</span>`;
