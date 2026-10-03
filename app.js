@@ -638,6 +638,8 @@ function getCategoryBadgeClass(category) {
   
   if (category.includes('생활비')) return 'badge-info';
   if (category.includes('저축') || category.includes('적금')) return 'badge-success';
+  if (category.includes('주거') || category.includes('관리비')) return 'badge-gyewon';
+  if (category.includes('구독')) return 'badge-dongwook';
   if (category.includes('잔액')) return 'badge-remain';
   if (category.includes('대출')) return 'badge-danger';
   if (category.includes('비상금') || category.includes('경조사')) return 'badge-warning';
@@ -2921,7 +2923,7 @@ function renderCharts() {
     const labels = sortedEntries.map(e => `${e[0]} (${formatKRW(e[1])})`);
     const dataValues = sortedEntries.map(e => e[1]);
     
-    const bgColors = originalCats.map(cat => {
+    const bgColors = originalCats.map((cat, index) => {
       const badgeClass = getAllocCategoryBadgeClass(cat);
       switch(badgeClass) {
         case 'badge-info': return '#06b6d4';
@@ -2932,8 +2934,13 @@ function renderCharts() {
         case 'badge-salary': return '#ec4899';
         case 'badge-total': return '#8b5cf6';
         case 'badge-remain': return '#84cc16';
+        case 'badge-gyewon': return '#fb7185';
+        case 'badge-dongwook': return '#38bdf8';
         case 'badge-secondary': 
-        default: return '#94a3b8';
+        default: 
+          // fallback palette for duplicates
+          const fallbackColors = ['#94a3b8', '#cbd5e1', '#64748b', '#475569', '#334155'];
+          return fallbackColors[index % fallbackColors.length];
       }
     });
 
@@ -2949,72 +2956,44 @@ function renderCharts() {
           borderWidth: 0
         }]
       },
-      plugins: [{
-        id: 'doughnutOutlabels',
-        afterDraw(chart) {
-          const { ctx, chartArea: { width, height } } = chart;
-          const centerX = chart.chartArea.left + width / 2;
-          const centerY = chart.chartArea.top + height / 2;
-          
-          chart.data.datasets.forEach((dataset, i) => {
-            const meta = chart.getDatasetMeta(i);
-            meta.data.forEach((datapoint, index) => {
-              if (dataset.data[index] === 0 || datapoint.hidden) return;
-
-              const text = chart.data.labels[index];
-              const color = dataset.backgroundColor[index];
-              
-              const angle = (datapoint.startAngle + datapoint.endAngle) / 2;
-              const r = datapoint.outerRadius;
-
-              const x1 = centerX + Math.cos(angle) * r;
-              const y1 = centerY + Math.sin(angle) * r;
-
-              const x2 = centerX + Math.cos(angle) * (r + 15);
-              const y2 = centerY + Math.sin(angle) * (r + 15);
-
-              const isRight = x2 >= centerX;
-              const x3 = isRight ? x2 + 15 : x2 - 15;
-              const y3 = y2;
-
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.lineTo(x2, y2);
-              ctx.lineTo(x3, y3);
-              ctx.strokeStyle = color;
-              ctx.lineWidth = 1.5;
-              ctx.stroke();
-
-              ctx.font = '600 11px sans-serif';
-              ctx.fillStyle = '#ffffff';
-              ctx.textBaseline = 'middle';
-              ctx.textAlign = isRight ? 'left' : 'right';
-              
-              // split label into title and amount if it has parentheses
-              if (text.includes('(')) {
-                const parts = text.split(' (');
-                ctx.fillText(parts[0], isRight ? x3 + 5 : x3 - 5, y3 - 6);
-                ctx.fillText('(' + parts[1], isRight ? x3 + 5 : x3 - 5, y3 + 8);
-              } else {
-                ctx.fillText(text, isRight ? x3 + 5 : x3 - 5, y3);
-              }
-            });
-          });
-        }
-      }],
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { left: 75, right: 75, top: 20, bottom: 20 } },
+        layout: { padding: { top: 15 } },
         plugins: {
-          legend: { display: false },
+          legend: { 
+            position: 'right', 
+            labels: { 
+              font: { size: 11 },
+              generateLabels: function(chart) {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map((label, i) => {
+                    const meta = chart.getDatasetMeta(0);
+                    const style = meta.controller.getStyle(i);
+                    return {
+                      text: label,
+                      fillStyle: style.backgroundColor,
+                      strokeStyle: style.borderColor,
+                      lineWidth: style.borderWidth,
+                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                      index: i,
+                      fontColor: style.backgroundColor,
+                      color: style.backgroundColor
+                    };
+                  });
+                }
+                return [];
+              }
+            } 
+          },
           tooltip: {
             callbacks: {
               label: (ctx) => `${ctx.label}`
             }
           }
         },
-        cutout: '65%'
+        cutout: '70%'
       }
     });
   }
