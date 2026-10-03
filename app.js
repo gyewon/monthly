@@ -2918,9 +2918,12 @@ function renderCharts() {
 
     const sortedEntries = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
     
-    // Create original categories for color mapping, and formatted labels for display
+    const totalAmount = sortedEntries.reduce((sum, e) => sum + e[1], 0);
     const originalCats = sortedEntries.map(e => e[0]);
-    const labels = sortedEntries.map(e => `${e[0]} (${formatKRW(e[1])})`);
+    const labels = sortedEntries.map(e => {
+      const percentage = totalAmount > 0 ? Math.round((e[1] / totalAmount) * 100) : 0;
+      return `${e[0]} ${percentage}% (${formatKRW(e[1])})`;
+    });
     const dataValues = sortedEntries.map(e => e[1]);
     
     const bgColors = originalCats.map((cat, index) => {
@@ -2978,8 +2981,8 @@ function renderCharts() {
                       lineWidth: style.borderWidth,
                       hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
                       index: i,
-                      fontColor: style.backgroundColor,
-                      color: style.backgroundColor
+                      fontColor: '#ffffff',
+                      color: '#ffffff'
                     };
                   });
                 }
