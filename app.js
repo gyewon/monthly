@@ -158,8 +158,10 @@ function renderIncomeTables() {
 
 
   const filtered = appState.incomes || [];
+  let totalIncomeAmount = 0;
 
   filtered.forEach(inc => {
+    totalIncomeAmount += Number(inc.amount) || 0;
     let badgeClass = 'badge-info';
     let personLabel = inc.person || '기타';
     if (inc.person === 'gyewon' || inc.person === '계원') { badgeClass = 'badge-gyewon'; personLabel = '계원'; }
@@ -185,6 +187,20 @@ function renderIncomeTables() {
     `;
     tbody.appendChild(tr);
   });
+
+  // Render Total Footer
+  let tfoot = document.querySelector('#table-income-unified tfoot');
+  if (!tfoot) {
+    tfoot = document.createElement('tfoot');
+    document.getElementById('table-income-unified').appendChild(tfoot);
+  }
+  tfoot.innerHTML = `
+    <tr style="background: rgba(255, 255, 255, 0.05); font-weight: bold; border-top: 2px solid rgba(255,255,255,0.1);">
+      <td colspan="3" style="text-align: center; color: var(--text-color);">합계</td>
+      <td class="text-accent" style="font-size: 1.1em;">${formatKRW(totalIncomeAmount)}</td>
+      <td colspan="3"></td>
+    </tr>
+  `;
 }
 // Supabase Integration Credentials
 const SUPABASE_URL = 'https://bdnqlcrpytkwuaonhgmm.supabase.co';
