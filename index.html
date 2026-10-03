@@ -160,10 +160,10 @@
             <div class="card-box-header">
               <h3><i class="fa-solid fa-chart-pie"></i> 카테고리별 배분 비중</h3>
             </div>
-            <div id="category-allocation-summary" class="payment-method-grid mb-3" style="grid-template-columns: repeat(2, 1fr);">
+            <div id="category-allocation-summary" class="payment-method-grid mb-3" style="grid-template-columns: repeat(2, minmax(130px, 180px)); justify-content: center;">
               <!-- Dynamically Populated Allocation Category Cards -->
             </div>
-            <div class="chart-container-small">
+            <div class="chart-container-small" style="margin-top: 50px;">
               <canvas id="categoryPieChart"></canvas>
             </div>
           </div>
@@ -172,10 +172,10 @@
             <div class="card-box-header">
               <h3><i class="fa-solid fa-credit-card"></i> 결제수단별 요약</h3>
             </div>
-            <div id="payment-method-summary" class="payment-method-grid mb-3">
+            <div id="payment-method-summary" class="payment-method-grid mb-3" style="grid-template-columns: repeat(2, minmax(130px, 180px)); justify-content: center;">
               <!-- Dynamically Populated -->
             </div>
-            <div class="chart-container-small">
+            <div class="chart-container-small" style="margin-top: 50px;">
               <canvas id="paymentMethodChart"></canvas>
             </div>
           </div>
