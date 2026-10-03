@@ -804,9 +804,10 @@ function renderFixedExpensesTable() {
       // Use actual method name as requested
       let m = item.method || '기타';
       m = m.trim();
+      let majorCat = getPMType(m);
       
       catData[c] = (catData[c] || 0) + amt;
-      methodData[m] = (methodData[m] || 0) + amt;
+      methodData[majorCat] = (methodData[majorCat] || 0) + amt;
     }
 
     const methodHTML = getPaymentMethodHTML(item.method);
@@ -1196,31 +1197,75 @@ function renderTimeline() {
   });
 }
 
+// Helper to get PM Type
+function getPMType(pm) {
+  if (!pm) return '미분류';
+  const pmStr = String(pm);
+  
+  if (!appState.categories.paymentMethodTypes) {
+    appState.categories.paymentMethodTypes = {};
+  }
+  if (appState.categories.paymentMethodTypes[pmStr]) {
+    const type = appState.categories.paymentMethodTypes[pmStr];
+    if (type === 'card') return '카드';
+    if (type === 'cash') return '현금/이체';
+    return type;
+  }
+  return pmStr.includes('카드') ? '카드' : '현금/이체';
+}
+
 // Render Payment Method Summary Cards
 function renderPaymentMethodSummary() {
   const container = document.getElementById('payment-method-summary');
   container.innerHTML = '';
 
   const pmMap = {};
+  const groupMap = {};
   let totalFixed = 0;
+
   appState.fixedExpenses.forEach(item => {
     let method = item.method || '기타';
     method = method.trim();
     const amt = Number(item.amount) || 0;
+    
     pmMap[method] = (pmMap[method] || 0) + amt;
     totalFixed += amt;
+    
+    const major = getPMType(method);
+    groupMap[major] = (groupMap[major] || 0) + amt;
   });
 
   if (totalFixed > 0) {
-    const totalCard = document.createElement('div');
-    totalCard.className = 'pm-card pm-card-total';
-    totalCard.style.border = '1px solid var(--accent-total)';
-    totalCard.style.backgroundColor = 'rgba(139, 92, 246, 0.05)';
-    totalCard.innerHTML = `
-      <div class="pm-name" style="margin-bottom:8px;"><span class="badge badge-total" style="font-weight: bold; padding: 5px 10px; font-size:13px;">총 합계</span></div>
-      <div class="pm-amount" style="color: var(--text-main); font-weight: 700;">${formatKRW(totalFixed)}</div>
+    const totalWrap = document.createElement('div');
+    totalWrap.style.display = 'flex';
+    totalWrap.style.gap = '10px';
+    totalWrap.style.flexWrap = 'wrap';
+    totalWrap.style.marginBottom = '10px';
+    totalWrap.style.width = '100%';
+
+    let html = `
+      <div class="pm-card pm-card-total" style="border: 1px solid var(--accent-total); background-color: rgba(139, 92, 246, 0.05); flex: 1; min-width: 150px;">
+        <div class="pm-name" style="margin-bottom:8px;"><span class="badge badge-total" style="font-weight: bold; padding: 5px 10px; font-size:13px;">총 결제액</span></div>
+        <div class="pm-amount" style="color: var(--text-main); font-weight: 700;">${formatKRW(totalFixed)}</div>
+      </div>
     `;
-    container.appendChild(totalCard);
+
+    const colors = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+    let cIdx = 0;
+
+    Object.entries(groupMap).sort((a,b)=>b[1]-a[1]).forEach(([major, amt]) => {
+      const color = colors[cIdx % colors.length];
+      html += `
+        <div class="pm-card pm-card-total" style="border: 1px solid ${color}; background-color: ${color}10; flex: 1; min-width: 150px;">
+          <div class="pm-name" style="margin-bottom:8px;"><span class="badge" style="background-color: ${color}; color:#fff; font-weight: bold; padding: 5px 10px; font-size:13px;"><i class="fa-solid fa-layer-group"></i> ${major}</span></div>
+          <div class="pm-amount" style="color: var(--text-main); font-weight: 700;">${formatKRW(amt)}</div>
+        </div>
+      `;
+      cIdx++;
+    });
+
+    totalWrap.innerHTML = html;
+    container.appendChild(totalWrap);
   }
 
   const sortedPm = Object.entries(pmMap).sort((a, b) => b[1] - a[1]);
@@ -2041,22 +2086,104 @@ window.openPaymentMethodManagerModal = function() {
   let tempFCats = [...appState.categories.fixedCategories];
   let tempExpenses = JSON.parse(JSON.stringify(appState.fixedExpenses || []));
 
+  window.draggedPMIdx = null;
+  window.draggedFCatIdx = null;
+
+  window.onDragStartPM = (e, idx) => { draggedPMIdx = idx; e.dataTransfer.effectAllowed = 'move'; e.target.style.opacity = '0.5'; };
+  window.onDragOverPM = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+  window.onDragEndPM = (e) => { e.target.style.opacity = '1'; draggedPMIdx = null; draggedFCatIdx = null; };
+  
+  window.onDropPM = (e, targetIdx) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedPMIdx !== null && draggedPMIdx !== targetIdx) {
+      const draggedVal = tempPMs[draggedPMIdx];
+      const targetVal = tempPMs[targetIdx];
+      const newType = getPMType(targetVal);
+      
+      tempPMs.splice(draggedPMIdx, 1);
+      const newTargetIdx = tempPMs.indexOf(targetVal);
+      tempPMs.splice(newTargetIdx, 0, draggedVal);
+      
+      if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
+      appState.categories.paymentMethodTypes[draggedVal] = newType;
+      renderAll();
+    }
+  };
+
+  window.onDragOverPMGroup = (e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--accent-primary)'; };
+  window.onDragLeavePMGroup = (e) => { e.currentTarget.style.borderColor = 'transparent'; };
+  window.onDropPMGroup = (e, groupName) => {
+    e.preventDefault();
+    e.currentTarget.style.borderColor = 'transparent';
+    if (draggedPMIdx !== null) {
+      const draggedVal = tempPMs[draggedPMIdx];
+      if (getPMType(draggedVal) !== groupName) {
+        if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
+        appState.categories.paymentMethodTypes[draggedVal] = groupName;
+        renderAll();
+      }
+    }
+  };
+
+  window.onDragStartFCat = (e, idx) => { draggedFCatIdx = idx; e.dataTransfer.effectAllowed = 'move'; e.target.style.opacity = '0.5'; };
+  window.onDropFCat = (e, targetIdx) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedFCatIdx !== null && draggedFCatIdx !== targetIdx) {
+      const item = tempFCats.splice(draggedFCatIdx, 1)[0];
+      tempFCats.splice(targetIdx, 0, item);
+      renderAll();
+    }
+  };
+
   const renderAll = () => {
+    const groupedPMs = {};
+    tempPMs.forEach(pm => {
+      const type = getPMType(pm);
+      if (!groupedPMs[type]) groupedPMs[type] = [];
+      groupedPMs[type].push(pm);
+    });
+
+    let pmGroupsHTML = '';
+    Object.keys(groupedPMs).forEach(group => {
+      pmGroupsHTML += `
+        <h5 style="font-size:12px; font-weight:700; color: var(--accent-primary); margin-bottom:10px;">
+          <i class="fa-solid fa-layer-group"></i> ${group}
+          <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer; margin-left: 8px;" title="대분류 이름 수정" onclick="editPMGroupInModal('${group}')"></i>
+        </h5>
+        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap; min-height: 30px; padding: 5px; border: 1px dashed transparent;" 
+             ondragover="onDragOverPMGroup(event)" 
+             ondragleave="onDragLeavePMGroup(event)"
+             ondrop="onDropPMGroup(event, '${group}')">
+          ${groupedPMs[group].map(pm => {
+            const idx = tempPMs.indexOf(pm);
+            return `
+            <span draggable="true" 
+                  ondragstart="onDragStartPM(event, ${idx})" 
+                  ondragover="onDragOverPM(event)" 
+                  ondrop="onDropPM(event, ${idx})" 
+                  ondragend="onDragEndPM(event)"
+                  style="display:inline-flex; align-items:center; gap:8px; cursor:grab; padding:4px 8px; border-radius:4px; transition: background 0.2s;">
+              ${getPaymentMethodHTML(pm)}
+              <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" title="대분류/소분류 수정" onclick="editPMInModal(${idx})"></i>
+              <i class="fa-solid fa-xmark text-muted" style="cursor:pointer;" onclick="deletePMInModal(${idx})"></i>
+            </span>
+          `;}).join('')}
+        </div>
+      `;
+    });
+
     body.innerHTML = `
       <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
         <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> 결제 수단</h4>
-        <p class="text-muted mb-3" style="font-size:12px;">등록된 결제 수단을 관리합니다. 수정 시 기존 항목에 자동 반영됩니다.</p>
-        <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;">
-          ${tempPMs.map((pm, idx) => `
-            <span style="display:inline-flex; align-items:center; gap:8px;">
-              ${getPaymentMethodHTML(pm)}
-              <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" onclick="editPMInModal(${idx})"></i>
-              <i class="fa-solid fa-xmark text-muted" style="cursor:pointer;" onclick="deletePMInModal(${idx})"></i>
-            </span>
-          `).join('')}
-        </div>
-        <div class="flex-gap-2">
-          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="새 결제수단 (예: 신한카드, 카카오페이)">
+        <p class="text-muted mb-3" style="font-size:12px;">원하시는 대분류(예: 주거래카드)에 소분류(결제수단명)를 등록하세요.</p>
+        
+        ${pmGroupsHTML}
+
+        <div class="flex-gap-2" style="align-items:center; margin-top:10px;">
+          <input type="text" id="new-pm-modal-type" class="form-control form-control-sm" style="width:110px;" placeholder="대분류 입력">
+          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="새 결제수단(소분류) 입력">
           <button class="btn btn-primary btn-sm" onclick="addPaymentMethodFromModal()"><i class="fa-solid fa-plus"></i> 추가</button>
         </div>
       </div>
@@ -2066,7 +2193,12 @@ window.openPaymentMethodManagerModal = function() {
         <p class="text-muted mb-3" style="font-size:12px;">고정지출 항목의 카테고리를 관리합니다.</p>
         <div class="flex-gap-2 mb-3" style="flex-wrap:wrap;">
           ${tempFCats.map((cat, idx) => `
-            <span style="display:inline-flex; align-items:center; gap:8px;">
+            <span draggable="true"
+                  ondragstart="onDragStartFCat(event, ${idx})"
+                  ondragover="onDragOverPM(event)"
+                  ondrop="onDropFCat(event, ${idx})"
+                  ondragend="onDragEndPM(event)"
+                  style="display:inline-flex; align-items:center; gap:8px; cursor:grab; padding:4px 8px; border-radius:4px;">
               ${getFixedCategoryHTML(cat)}
               <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" onclick="editFCatInModal(${idx})"></i>
               <i class="fa-solid fa-xmark text-muted" style="cursor:pointer;" onclick="deleteFCatInModal(${idx})"></i>
@@ -2083,10 +2215,16 @@ window.openPaymentMethodManagerModal = function() {
 
   window.addPaymentMethodFromModal = function() {
     const input = document.getElementById('new-pm-modal-input');
+    const typeInput = document.getElementById('new-pm-modal-type');
     if (!input) return;
     const val = input.value.trim();
+    const typeVal = typeInput && typeInput.value.trim() ? typeInput.value.trim() : (val.includes('카드') ? '카드' : '현금/이체');
+
     if (val && !tempPMs.includes(val)) {
-      tempPMs.push(val); renderAll();
+      tempPMs.push(val);
+      if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
+      appState.categories.paymentMethodTypes[val] = typeVal;
+      renderAll();
     }
   };
   window.addFCatFromModal = function() {
@@ -2097,15 +2235,47 @@ window.openPaymentMethodManagerModal = function() {
       tempFCats.push(val); renderAll();
     }
   };
+
+  window.editPMGroupInModal = function(oldGroupName) {
+    const newGroupName = prompt('대분류 이름을 수정하세요:', oldGroupName);
+    if (!newGroupName || newGroupName.trim() === '' || newGroupName.trim() === oldGroupName) return;
+    const trimmed = newGroupName.trim();
+    
+    if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
+    
+    tempPMs.forEach(pm => {
+      if (getPMType(pm) === oldGroupName) {
+        appState.categories.paymentMethodTypes[pm] = trimmed;
+      }
+    });
+    renderAll();
+  };
+
   window.editPMInModal = function(idx) {
     const oldVal = tempPMs[idx];
-    const newVal = prompt('결제 수단 이름을 수정하세요:', oldVal);
-    if (newVal && newVal.trim() !== '' && newVal.trim() !== oldVal) {
-      const trimmed = newVal.trim();
+    const oldType = getPMType(oldVal);
+
+    const newVal = prompt('결제 수단(소분류) 이름을 수정하세요:', oldVal);
+    if (!newVal || newVal.trim() === '') return;
+    
+    const newType = prompt('이 결제수단이 속할 대분류 이름을 수정하세요:', oldType);
+    if (!newType || newType.trim() === '') return;
+
+    const trimmed = newVal.trim();
+    const trimmedType = newType.trim();
+
+    if (trimmed !== oldVal) {
       tempPMs[idx] = trimmed;
       tempExpenses.forEach(item => { if (item.method === oldVal) item.method = trimmed; });
-      renderAll();
     }
+    
+    if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
+    if (trimmed !== oldVal) {
+      delete appState.categories.paymentMethodTypes[oldVal];
+    }
+    appState.categories.paymentMethodTypes[trimmed] = trimmedType;
+    
+    renderAll();
   };
   window.deletePMInModal = function(idx) {
     if (tempPMs.length <= 1) { alert('최소 1개 이상 필요'); return; }
