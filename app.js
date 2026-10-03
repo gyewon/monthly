@@ -2646,7 +2646,7 @@ function openAddAllocModal(personKey) {
     </div>
     <div class="form-group">
       <label>금액 (원)</label>
-      <input type="number" id="modal-alloc-amount" class="form-control" placeholder="0">
+      <input type="text" id="modal-alloc-amount" class="form-control" placeholder="0 (숫자 입력 시 , 자동 적용)" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')">
     </div>
     <div class="form-group">
       <label>출금</label>
@@ -2676,7 +2676,8 @@ function openAddAllocModal(personKey) {
 
   document.getElementById('modal-save-btn').onclick = () => {
     const name = document.getElementById('modal-alloc-name').value.trim();
-    const amount = Number(document.getElementById('modal-alloc-amount').value) || 0;
+    const rawAmt = document.getElementById('modal-alloc-amount').value.replace(/,/g, '');
+    const amount = Number(rawAmt) || 0;
     const bank = document.getElementById('modal-alloc-bank').value.trim();
     const deposit = document.getElementById('modal-alloc-deposit').value.trim();
     let day = document.getElementById('modal-alloc-day').value.trim();
@@ -2720,7 +2721,7 @@ function openAddFixedExpenseModal() {
     </div>
     <div class="form-group">
       <label>금액 (원)</label>
-      <input type="number" id="modal-fe-amount" class="form-control" placeholder="0">
+      <input type="text" id="modal-fe-amount" class="form-control" placeholder="0 (숫자 입력 시 , 자동 적용)" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')">
     </div>
     <div class="form-group">
       <label>출금처</label>
@@ -2760,7 +2761,8 @@ function openAddFixedExpenseModal() {
 
   document.getElementById('modal-save-btn').onclick = () => {
     const name = document.getElementById('modal-fe-name').value.trim();
-    const amount = Number(document.getElementById('modal-fe-amount').value) || 0;
+    const rawAmt = document.getElementById('modal-fe-amount').value.replace(/,/g, '');
+    const amount = Number(rawAmt) || 0;
     const actualMarch = amount; // Merged with amount
     const bank = document.getElementById('modal-fe-bank').value.trim();
     const deposit = document.getElementById('modal-fe-deposit').value.trim();
