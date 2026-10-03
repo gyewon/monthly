@@ -629,13 +629,18 @@ function renderAll() {
 
 function getCategoryBadgeClass(category) {
   if (!category) return 'badge-secondary';
+  if (category.includes('급여') || category.includes('기본급') || category.includes('월급')) return 'badge-salary';
+  if (category.includes('보너스') || category.includes('상여')) return 'badge-warning';
+  if (category.includes('인센티브')) return 'badge-success';
+  if (category.includes('부수입') || category.includes('알바')) return 'badge-info';
+  if (category.includes('투자') || category.includes('연금') || category.includes('배당')) return 'badge-primary';
+  if (category.includes('기타수입') || category.includes('기타 수입')) return 'badge-total';
+  
   if (category.includes('생활비')) return 'badge-info';
-  if (category.includes('급여') || category.includes('기본급')) return 'badge-salary';
   if (category.includes('저축') || category.includes('적금')) return 'badge-success';
   if (category.includes('잔액')) return 'badge-remain';
-  if (category.includes('투자') || category.includes('연금') || category.includes('배당')) return 'badge-primary';
   if (category.includes('대출')) return 'badge-danger';
-  if (category.includes('비상금') || category.includes('경조사') || category.includes('보너스') || category.includes('상여') || category.includes('인센티브')) return 'badge-warning';
+  if (category.includes('비상금') || category.includes('경조사')) return 'badge-warning';
   return 'badge-secondary';
 }
 
