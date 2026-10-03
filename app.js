@@ -2949,44 +2949,72 @@ function renderCharts() {
           borderWidth: 0
         }]
       },
+      plugins: [{
+        id: 'doughnutOutlabels',
+        afterDraw(chart) {
+          const { ctx, chartArea: { width, height } } = chart;
+          const centerX = chart.chartArea.left + width / 2;
+          const centerY = chart.chartArea.top + height / 2;
+          
+          chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            meta.data.forEach((datapoint, index) => {
+              if (dataset.data[index] === 0 || datapoint.hidden) return;
+
+              const text = chart.data.labels[index];
+              const color = dataset.backgroundColor[index];
+              
+              const angle = (datapoint.startAngle + datapoint.endAngle) / 2;
+              const r = datapoint.outerRadius;
+
+              const x1 = centerX + Math.cos(angle) * r;
+              const y1 = centerY + Math.sin(angle) * r;
+
+              const x2 = centerX + Math.cos(angle) * (r + 15);
+              const y2 = centerY + Math.sin(angle) * (r + 15);
+
+              const isRight = x2 >= centerX;
+              const x3 = isRight ? x2 + 15 : x2 - 15;
+              const y3 = y2;
+
+              ctx.beginPath();
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+              ctx.lineTo(x3, y3);
+              ctx.strokeStyle = color;
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+
+              ctx.font = '600 11px sans-serif';
+              ctx.fillStyle = color;
+              ctx.textBaseline = 'middle';
+              ctx.textAlign = isRight ? 'left' : 'right';
+              
+              // split label into title and amount if it has parentheses
+              if (text.includes('(')) {
+                const parts = text.split(' (');
+                ctx.fillText(parts[0], isRight ? x3 + 5 : x3 - 5, y3 - 6);
+                ctx.fillText('(' + parts[1], isRight ? x3 + 5 : x3 - 5, y3 + 8);
+              } else {
+                ctx.fillText(text, isRight ? x3 + 5 : x3 - 5, y3);
+              }
+            });
+          });
+        }
+      }],
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top: 15 } },
+        layout: { padding: 40 },
         plugins: {
-          legend: { 
-            position: 'right', 
-            labels: { 
-              font: { size: 11 },
-              generateLabels: function(chart) {
-                const data = chart.data;
-                if (data.labels.length && data.datasets.length) {
-                  return data.labels.map((label, i) => {
-                    const meta = chart.getDatasetMeta(0);
-                    const style = meta.controller.getStyle(i);
-                    return {
-                      text: label,
-                      fillStyle: style.backgroundColor,
-                      strokeStyle: style.borderColor,
-                      lineWidth: style.borderWidth,
-                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
-                      index: i,
-                      fontColor: style.backgroundColor,
-                      color: style.backgroundColor
-                    };
-                  });
-                }
-                return [];
-              }
-            } 
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: (ctx) => `${ctx.label}`
             }
           }
         },
-        cutout: '70%'
+        cutout: '65%'
       }
     });
   }
