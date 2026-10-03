@@ -2986,7 +2986,7 @@ function renderCharts() {
               ctx.stroke();
 
               ctx.font = '600 11px sans-serif';
-              ctx.fillStyle = color;
+              ctx.fillStyle = '#ffffff';
               ctx.textBaseline = 'middle';
               ctx.textAlign = isRight ? 'left' : 'right';
               
@@ -3005,7 +3005,7 @@ function renderCharts() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: 40 },
+        layout: { padding: { left: 75, right: 75, top: 20, bottom: 20 } },
         plugins: {
           legend: { display: false },
           tooltip: {
