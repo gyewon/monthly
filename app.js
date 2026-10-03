@@ -384,6 +384,7 @@ function loadState() {
 }
 
 function saveState() {
+  appState.lastUpdated = Date.now();
   localStorage.setItem('dongwook_gyewon_budget_app_v2', JSON.stringify(appState));
   renderAll();
   syncToSupabase();
@@ -426,7 +427,25 @@ async function syncFromSupabase() {
         updateSupabaseBadge(false, '테이블 준비 중');
       }
     } else if (data && data.data) {
-      appState = normalizeState(data.data);
+      const serverState = data.data;
+      const localStateStr = localStorage.getItem('dongwook_gyewon_budget_app_v2');
+      
+      // Timestamp based resolution to prevent data loss on rapid refresh
+      if (localStateStr) {
+        try {
+          const localState = JSON.parse(localStateStr);
+          if (localState.lastUpdated && serverState.lastUpdated && localState.lastUpdated > serverState.lastUpdated) {
+            console.log('Local state is newer than server state. Syncing local to server.');
+            appState = normalizeState(localState);
+            syncToSupabase();
+            renderAll();
+            updateSupabaseBadge(true);
+            return;
+          }
+        } catch(e) {}
+      }
+
+      appState = normalizeState(serverState);
       localStorage.setItem('dongwook_gyewon_budget_app_v2', JSON.stringify(appState));
       renderAll();
       updateSupabaseBadge(true);
@@ -1597,7 +1616,7 @@ window.toggleAllocAutoTransfer = function(pathStr, itemId) {
     item.isAutoTransfer = !currentlyAuto;
     if (!item.isAutoTransfer && item.method && item.method.includes('자동')) {
       item.method = '';
-    } else if (item.isAutoTransfer) {
+    } else if (item.isAutoTransfer && (!item.method || item.method.includes('기타'))) {
       item.method = '자동이체';
     }
     saveState();
@@ -2478,22 +2497,24 @@ function openCategoryPickerModal({ title, currentCategory, categoryList, onSelec
       badgeHTML = getFixedCategoryHTML(cat);
     } else {
       const badgeClass = typeof getAllocCategoryBadgeClass === 'function' ? getAllocCategoryBadgeClass(cat) : 'badge-info';
-      badgeHTML = `<span class="badge ${badgeClass}" style="font-size: 13px; padding: 6px 12px;">${cat}</span>`;
+      badgeHTML = `<span class="badge ${badgeClass}" style="font-size: 14px; padding: 8px 12px;">${cat}</span>`;
     }
 
     return `
-      <button class="btn btn-outline-light category-pick-btn ${isSelected ? 'active-cat' : ''}" 
-              style="padding: 12px 16px; font-size: 14px; font-weight: 600; border-radius: 10px; text-align: left; display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);"
-              onclick="selectPickedCategory('${cat}')">
+      <div onclick="selectPickedCategory('${cat}')" 
+           style="cursor:pointer; position:relative; display:inline-block; transition: transform 0.1s; margin-bottom: 8px;"
+           onmousedown="this.style.transform='scale(0.95)'"
+           onmouseup="this.style.transform='scale(1)'"
+           onmouseleave="this.style.transform='scale(1)'">
         ${badgeHTML}
-        ${isSelected ? '<i class="fa-solid fa-circle-check text-success" style="font-size: 18px;"></i>' : '<i class="fa-solid fa-chevron-right text-muted" style="font-size: 12px;"></i>'}
-      </button>
+        ${isSelected ? '<div style="position:absolute; top:-6px; right:-6px; background:#10b981; color:#fff; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:12px; box-shadow:0 2px 4px rgba(0,0,0,0.5);"><i class="fa-solid fa-check"></i></div>' : ''}
+      </div>
     `;
   }).join('');
 
   body.innerHTML = `
-    <p class="text-muted mb-3" style="font-size: 13px;">변경할 카테고리를 아래 목록에서 터치/클릭하세요.</p>
-    <div class="category-picker-list mb-3" style="max-height: 280px; overflow-y: auto; padding-right: 4px;">
+    <p class="text-muted mb-3" style="font-size: 13px;">변경할 카테고리를 터치/클릭하세요.</p>
+    <div class="category-picker-list flex-gap-2 mb-4" style="display:flex; flex-wrap:wrap; max-height: 400px; overflow-y: auto;">
       ${categoryCards}
     </div>
     <div class="d-flex flex-gap-2">
