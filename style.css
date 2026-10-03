@@ -556,6 +556,12 @@ input:checked + .slider:before { transform: translateX(16px); }
   color: var(--accent-danger);
 }
 
+.badge-balance.zero,
+.kpi-value.zero {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8 !important;
+}
+
 /* Card Boxes */
 .card-box {
   background: var(--bg-card);

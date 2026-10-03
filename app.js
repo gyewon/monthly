@@ -557,10 +557,11 @@ function renderAll() {
   const remainElem = document.getElementById('kpi-remaining-balance');
   remainElem.innerText = formatKRW(calcs.remainingBalance);
   
+  remainElem.classList.remove('text-danger', 'zero');
   if (calcs.remainingBalance < 0) {
     remainElem.classList.add('text-danger');
-  } else {
-    remainElem.classList.remove('text-danger');
+  } else if (calcs.remainingBalance === 0) {
+    remainElem.classList.add('zero');
   }
 
   document.getElementById('kpi-remain-gyewon').innerText = formatKRW(calcs.remainGyewon);
@@ -707,8 +708,9 @@ function renderAllocationTables() {
   if (gAllocElem) gAllocElem.innerText = formatKRW(calcs.allocGyewonSum);
   if (gRemainElem) {
     gRemainElem.innerText = formatKRW(calcs.remainGyewon);
+    gRemainElem.classList.remove('negative', 'zero');
     if (calcs.remainGyewon < 0) gRemainElem.classList.add('negative');
-    else gRemainElem.classList.remove('negative');
+    else if (calcs.remainGyewon === 0) gRemainElem.classList.add('zero');
   }
 
   // Update Dongwook Summary Bar
@@ -719,8 +721,9 @@ function renderAllocationTables() {
   if (dAllocElem) dAllocElem.innerText = formatKRW(calcs.allocDongwookSum);
   if (dRemainElem) {
     dRemainElem.innerText = formatKRW(calcs.remainDongwook);
+    dRemainElem.classList.remove('negative', 'zero');
     if (calcs.remainDongwook < 0) dRemainElem.classList.add('negative');
-    else dRemainElem.classList.remove('negative');
+    else if (calcs.remainDongwook === 0) dRemainElem.classList.add('zero');
   }
 
   // Target Filter Visibility Control (Removed filter hiding per user request)
