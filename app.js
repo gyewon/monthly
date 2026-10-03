@@ -258,7 +258,14 @@ function normalizeAllocationItem(item) {
 }
 
 function normalizeState(state) {
+  if (!state) state = {};
   if (!state.categories) state.categories = {};
+  if (!state.allocations) state.allocations = { gyewon: [], dongwook: [] };
+  if (!state.allocations.gyewon) state.allocations.gyewon = [];
+  if (!state.allocations.dongwook) state.allocations.dongwook = [];
+  if (!state.fixedExpenses) state.fixedExpenses = [];
+  if (!state.monthlyHistory) state.monthlyHistory = [];
+  if (!state.incomes) state.incomes = [];
   if (!state.categories.allocCategories) {
     state.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
   }
