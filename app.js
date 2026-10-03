@@ -650,8 +650,8 @@ function getPaymentMethodHTML(method) {
   if (!method || method === '-') return '<span class="text-muted">-</span>';
   
   let company = method;
-  if (appState.categories?.paymentMethodTypes?.[method]) {
-    company = appState.categories.paymentMethodTypes[method];
+  if (appState.categories?.paymentMethodCompanies?.[method]) {
+    company = appState.categories.paymentMethodCompanies[method];
   }
 
   let logoUrl = '';
@@ -2200,7 +2200,7 @@ window.openPaymentMethodManagerModal = function() {
       pmGroupsHTML += `
         <h5 style="font-size:12px; font-weight:700; color: var(--accent-primary); margin-bottom:10px;">
           <i class="fa-solid fa-layer-group"></i> ${group}
-          <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer; margin-left: 8px;" title="카드사 이름 수정" onclick="editPMGroupInModal('${group}')"></i>
+          <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer; margin-left: 8px;" title="대분류 이름 수정" onclick="editPMGroupInModal('${group}')"></i>
         </h5>
         <div class="flex-gap-2 mb-3" style="flex-wrap:wrap; min-height: 30px; padding: 5px; border: 1px dashed transparent;" 
              ondragover="onDragOverPMGroup(event)" 
@@ -2216,25 +2216,29 @@ window.openPaymentMethodManagerModal = function() {
                   ondragend="onDragEndPM(event)"
                   style="display:inline-flex; align-items:center; gap:8px; cursor:grab; padding:4px 8px; border-radius:4px; transition: background 0.2s;">
               ${getPaymentMethodHTML(pm)}
-              <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" title="카드사/별명 수정" onclick="editPMInModal(${idx})"></i>
+              <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" title="대분류/소분류 수정" onclick="editPMInModal(${idx})"></i>
               <i class="fa-solid fa-xmark text-muted" style="cursor:pointer;" onclick="deletePMInModal(${idx})"></i>
             </span>
           `;}).join('')}
+          <div style="display:inline-flex; align-items:center; margin-left: 8px;">
+            <input type="text" id="new-pm-group-input-${group}" class="form-control form-control-sm" style="width:120px;" placeholder="결제수단명 입력" onkeydown="if(event.key==='Enter') addPMToGroup('${group}')">
+            <button class="btn btn-outline-primary btn-sm" style="margin-left:4px;" onclick="addPMToGroup('${group}')"><i class="fa-solid fa-plus"></i></button>
+          </div>
         </div>
       `;
     });
 
     body.innerHTML = `
       <div class="card-box mb-3" style="padding: 16px; background: rgba(0,0,0,0.2);">
-        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> 결제 수단 (카드/계좌)</h4>
-        <p class="text-muted mb-3" style="font-size:12px;">카드사(예: 신한, 하나)를 지정하고 원하시는 카드 별명을 등록하세요.</p>
+        <h4 style="font-size:14px; font-weight:700; margin-bottom:10px;"><i class="fa-solid fa-credit-card"></i> 결제 수단</h4>
+        <p class="text-muted mb-3" style="font-size:12px;">원하시는 대분류(예: 주거래카드)에 소분류(결제수단명)를 등록하세요. '카드'의 경우 카드사 정보(로고)도 등록할 수 있습니다.</p>
         
         ${pmGroupsHTML}
 
-        <div class="flex-gap-2" style="align-items:center; margin-top:10px;">
-          <input type="text" id="new-pm-modal-type" class="form-control form-control-sm" style="width:110px;" placeholder="카드사/은행">
-          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="새 결제수단 별명 입력">
-          <button class="btn btn-primary btn-sm" onclick="addPaymentMethodFromModal()"><i class="fa-solid fa-plus"></i> 추가</button>
+        <div class="flex-gap-2" style="align-items:center; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1);">
+          <input type="text" id="new-pm-modal-type" class="form-control form-control-sm" style="width:130px;" placeholder="새 대분류명 입력">
+          <input type="text" id="new-pm-modal-input" class="form-control form-control-sm" placeholder="새 결제수단명 입력">
+          <button class="btn btn-secondary btn-sm" onclick="addPaymentMethodFromModal()"><i class="fa-solid fa-plus"></i> 대분류 추가</button>
         </div>
       </div>
 
@@ -2268,15 +2272,47 @@ window.openPaymentMethodManagerModal = function() {
     const typeInput = document.getElementById('new-pm-modal-type');
     if (!input) return;
     const val = input.value.trim();
-    const typeVal = typeInput && typeInput.value.trim() ? typeInput.value.trim() : '미분류';
+    const typeVal = typeInput && typeInput.value.trim() ? typeInput.value.trim() : (val.includes('카드') ? '카드' : '현금/이체');
 
     if (val && !tempPMs.includes(val)) {
       tempPMs.push(val);
       if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
       appState.categories.paymentMethodTypes[val] = typeVal;
+
+      if (typeVal.includes('카드') || val.includes('카드')) {
+        const company = prompt(`'${val}'의 카드사/은행을 입력하세요 (예: 신한, 삼성, 하나 등):`, '');
+        if (company && company.trim()) {
+          if (!appState.categories.paymentMethodCompanies) appState.categories.paymentMethodCompanies = {};
+          appState.categories.paymentMethodCompanies[val] = company.trim();
+        }
+      }
+
       renderAll();
     }
   };
+
+  window.addPMToGroup = function(groupName) {
+    const input = document.getElementById(`new-pm-group-input-${groupName}`);
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) return;
+
+    if (!tempPMs.includes(val)) {
+      tempPMs.push(val);
+      if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
+      appState.categories.paymentMethodTypes[val] = groupName;
+
+      if (groupName.includes('카드') || val.includes('카드')) {
+        const company = prompt(`'${val}'의 카드사/은행을 입력하세요 (예: 신한, 삼성, 하나 등):`, '');
+        if (company && company.trim()) {
+          if (!appState.categories.paymentMethodCompanies) appState.categories.paymentMethodCompanies = {};
+          appState.categories.paymentMethodCompanies[val] = company.trim();
+        }
+      }
+      renderAll();
+    }
+  };
+
   window.addFCatFromModal = function() {
     const input = document.getElementById('new-fcat-modal-input');
     if (!input) return;
@@ -2287,7 +2323,7 @@ window.openPaymentMethodManagerModal = function() {
   };
 
   window.editPMGroupInModal = function(oldGroupName) {
-    const newGroupName = prompt('카드사/은행 이름을 수정하세요 (예: 하나, 삼성, 우리):', oldGroupName);
+    const newGroupName = prompt('대분류 이름을 수정하세요:', oldGroupName);
     if (!newGroupName || newGroupName.trim() === '' || newGroupName.trim() === oldGroupName) return;
     const trimmed = newGroupName.trim();
     
@@ -2306,18 +2342,32 @@ window.openPaymentMethodManagerModal = function() {
     const oldType = getPMType(oldVal);
 
     const newVal = prompt('결제수단 별명을 수정하세요 (예: 데이트용 카드):', oldVal);
-    if (!newVal || newVal.trim() === '' || newVal.trim() === oldVal) return;
+    if (!newVal || newVal.trim() === '') return;
 
     const trimmed = newVal.trim();
-    const trimmedType = oldType; // Keep the same company/group
+    let trimmedCompany = null;
+
+    if (oldType.includes('카드') || trimmed.includes('카드')) {
+      const oldCompany = (appState.categories.paymentMethodCompanies && appState.categories.paymentMethodCompanies[oldVal]) || '';
+      const newCompany = prompt('이 카드의 카드사/은행을 입력하세요 (예: 하나, 신한, 삼성, 토스 등):', oldCompany);
+      if (newCompany !== null) {
+        trimmedCompany = newCompany.trim();
+      }
+    }
 
     tempPMs[idx] = trimmed;
     tempExpenses.forEach(item => { if (item.method === oldVal) item.method = trimmed; });
     
     if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
-    delete appState.categories.paymentMethodTypes[oldVal];
-    appState.categories.paymentMethodTypes[trimmed] = trimmedType;
+    if (trimmed !== oldVal) delete appState.categories.paymentMethodTypes[oldVal];
+    appState.categories.paymentMethodTypes[trimmed] = oldType; // Keep the same company/group
     
+    if (!appState.categories.paymentMethodCompanies) appState.categories.paymentMethodCompanies = {};
+    if (trimmed !== oldVal) delete appState.categories.paymentMethodCompanies[oldVal];
+    if (trimmedCompany) {
+      appState.categories.paymentMethodCompanies[trimmed] = trimmedCompany;
+    }
+
     renderAll();
   };
   window.deletePMInModal = function(idx) {
