@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>데이터 마이그레이션 도구</title>
+  <style>
+    body { font-family: 'Pretendard', sans-serif; padding: 50px; text-align: center; background: #0f172a; color: white; }
+    button { padding: 15px 30px; font-size: 18px; font-weight: bold; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #4f46e5; }
+    #msg { margin-top: 20px; font-size: 16px; color: #10b981; }
+  </style>
+</head>
+<body>
+  <h2>로컬 데이터 ➡️ 클라우드(Supabase) 복구 도구</h2>
+  <p style="color: #94a3b8; margin-bottom: 30px;">
+    이 버튼을 누르면 고객님의 브라우저에 남아있을지 모르는 가계부 데이터를 <br>
+    클라우드로 강제 업로드하여 깃허브 페이지와 동기화시킵니다.
+  </p>
+  
+  <button id="btn">클라우드로 데이터 복구하기</button>
+  <p id="msg"></p>
+
+  <script>
+    document.getElementById('btn').onclick = async () => {
+      const msg = document.getElementById('msg');
+      
+      const dataStr = localStorage.getItem('dongwook_gyewon_budget_app_v2');
+      if (!dataStr) {
+        msg.style.color = '#ef4444';
+        msg.innerText = "❌ 로컬 스토리지에 저장된 데이터가 없습니다.";
+        return;
+      }
+      
+      let appState;
+      try {
+        appState = JSON.parse(dataStr);
+      } catch(e) {
+        msg.style.color = '#ef4444';
+        msg.innerText = "❌ 데이터 파싱 에러가 발생했습니다.";
+        return;
+      }
+
+      msg.style.color = '#f59e0b';
+      msg.innerText = "⏳ 클라우드로 데이터 업로드 중...";
+      
+      const SUPABASE_URL = 'https://bdnqlcrpytkwuaonhgmm.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkbnFsY3JweXRrd3Vhb25oZ21tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MjYyMDEsImV4cCI6MjEwNTUwMjIwMX0.QLt4HgVyCoAR2oy1R5O3SdNe7N3XtVxP7rjabS3j_ew';
+      
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/monthly_budget_data?id=eq.main', {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            data: appState,
+            updated_at: new Date().toISOString()
+          })
+        });
+        
+        if (res.ok) {
+          msg.style.color = '#10b981';
+          msg.innerHTML = "✅ <b>복구 완료!</b> 이제 깃허브 페이지를 새로고침 해보세요.";
+        } else {
+          msg.style.color = '#ef4444';
+          msg.innerText = "❌ 업로드 실패: " + await res.text();
+        }
+      } catch (e) {
+        msg.style.color = '#ef4444';
+        msg.innerText = "❌ 네트워크 에러: " + e.message;
+      }
+    };
+  </script>
+</body>
+</html>
