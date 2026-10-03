@@ -1388,7 +1388,7 @@ function renderCategoryAllocationSummary() {
     totalCard.style.border = '1px solid var(--accent-total)';
     totalCard.style.backgroundColor = 'rgba(139, 92, 246, 0.05)';
     totalCard.innerHTML = `
-      <div class="pm-name"><span class="badge badge-total" style="font-weight: bold;">총 합계</span></div>
+      <div class="pm-name"><span class="badge badge-total" style="font-weight: bold;">총 사용 합계</span></div>
       <div class="pm-amount" style="margin-top:4px; color: var(--text-main); font-weight: 700;">${formatKRW(totalAlloc)}</div>
       <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">총 수입 대비 ${allocPct}%</div>
     `;
