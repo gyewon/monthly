@@ -2221,7 +2221,7 @@ window.openPaymentMethodManagerModal = function() {
             </span>
           `;}).join('')}
           <div style="display:inline-flex; align-items:center; margin-left: 8px;">
-            <input type="text" id="new-pm-group-input-${group}" class="form-control form-control-sm" style="width:120px;" placeholder="결제수단명 입력" onkeydown="if(event.key==='Enter') addPMToGroup('${group}')">
+            <input type="text" id="new-pm-group-input-${group}" class="form-control form-control-sm" style="width:160px;" placeholder="${group.includes('카드') ? '별명, 카드사 (예: 밥,신한)' : '결제수단명 입력'}" onkeydown="if(event.key==='Enter') addPMToGroup('${group}')">
             <button class="btn btn-outline-primary btn-sm" style="margin-left:4px;" onclick="addPMToGroup('${group}')"><i class="fa-solid fa-plus"></i></button>
           </div>
         </div>
@@ -2271,20 +2271,25 @@ window.openPaymentMethodManagerModal = function() {
     const input = document.getElementById('new-pm-modal-input');
     const typeInput = document.getElementById('new-pm-modal-type');
     if (!input) return;
-    const val = input.value.trim();
-    const typeVal = typeInput && typeInput.value.trim() ? typeInput.value.trim() : (val.includes('카드') ? '카드' : '현금/이체');
+    const rawVal = input.value.trim();
+    const typeVal = typeInput && typeInput.value.trim() ? typeInput.value.trim() : '미분류';
+
+    let val = rawVal;
+    let company = '';
+    if (rawVal.includes(',')) {
+      const parts = rawVal.split(',');
+      val = parts[0].trim();
+      company = parts.slice(1).join(',').trim();
+    }
 
     if (val && !tempPMs.includes(val)) {
       tempPMs.push(val);
       if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
       appState.categories.paymentMethodTypes[val] = typeVal;
 
-      if (typeVal.includes('카드') || val.includes('카드')) {
-        const company = prompt(`'${val}'의 카드사/은행을 입력하세요 (예: 신한, 삼성, 하나 등):`, '');
-        if (company && company.trim()) {
-          if (!appState.categories.paymentMethodCompanies) appState.categories.paymentMethodCompanies = {};
-          appState.categories.paymentMethodCompanies[val] = company.trim();
-        }
+      if (company) {
+        if (!appState.categories.paymentMethodCompanies) appState.categories.paymentMethodCompanies = {};
+        appState.categories.paymentMethodCompanies[val] = company;
       }
 
       renderAll();
@@ -2294,7 +2299,17 @@ window.openPaymentMethodManagerModal = function() {
   window.addPMToGroup = function(groupName) {
     const input = document.getElementById(`new-pm-group-input-${groupName}`);
     if (!input) return;
-    const val = input.value.trim();
+    const rawVal = input.value.trim();
+    if (!rawVal) return;
+
+    let val = rawVal;
+    let company = '';
+    if (rawVal.includes(',')) {
+      const parts = rawVal.split(',');
+      val = parts[0].trim();
+      company = parts.slice(1).join(',').trim();
+    }
+
     if (!val) return;
 
     if (!tempPMs.includes(val)) {
@@ -2302,12 +2317,9 @@ window.openPaymentMethodManagerModal = function() {
       if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
       appState.categories.paymentMethodTypes[val] = groupName;
 
-      if (groupName.includes('카드') || val.includes('카드')) {
-        const company = prompt(`'${val}'의 카드사/은행을 입력하세요 (예: 신한, 삼성, 하나 등):`, '');
-        if (company && company.trim()) {
-          if (!appState.categories.paymentMethodCompanies) appState.categories.paymentMethodCompanies = {};
-          appState.categories.paymentMethodCompanies[val] = company.trim();
-        }
+      if (company) {
+        if (!appState.categories.paymentMethodCompanies) appState.categories.paymentMethodCompanies = {};
+        appState.categories.paymentMethodCompanies[val] = company;
       }
       renderAll();
     }
@@ -2341,19 +2353,32 @@ window.openPaymentMethodManagerModal = function() {
     const oldVal = tempPMs[idx];
     const oldType = getPMType(oldVal);
 
-    const newVal = prompt('결제수단 별명을 수정하세요 (예: 데이트용 카드):', oldVal);
+    const oldCompany = (appState.categories.paymentMethodCompanies && appState.categories.paymentMethodCompanies[oldVal]) || '';
+    
+    const isCard = oldType.includes('카드') || oldVal.includes('카드');
+    let promptMsg = '결제수단 별명을 수정하세요 (예: 데이트용 카드):';
+    let defaultText = oldVal;
+    
+    if (isCard) {
+      promptMsg = '결제수단 별명과 카드사를 쉼표(,)로 구분해서 적어주세요. (예: 밥값카드, 신한)';
+      defaultText = oldCompany ? `${oldVal}, ${oldCompany}` : oldVal;
+    }
+
+    const newVal = prompt(promptMsg, defaultText);
     if (!newVal || newVal.trim() === '') return;
 
-    const trimmed = newVal.trim();
+    let trimmed = newVal.trim();
     let trimmedCompany = null;
 
-    if (oldType.includes('카드') || trimmed.includes('카드')) {
-      const oldCompany = (appState.categories.paymentMethodCompanies && appState.categories.paymentMethodCompanies[oldVal]) || '';
-      const newCompany = prompt('이 카드의 카드사/은행을 입력하세요 (예: 하나, 신한, 삼성, 토스 등):', oldCompany);
-      if (newCompany !== null) {
-        trimmedCompany = newCompany.trim();
-      }
+    if (isCard && trimmed.includes(',')) {
+      const parts = trimmed.split(',');
+      trimmed = parts[0].trim();
+      trimmedCompany = parts.slice(1).join(',').trim();
+    } else if (isCard && !trimmed.includes(',')) {
+      trimmedCompany = newVal.includes(',') ? '' : oldCompany;
     }
+
+    if (!trimmed) return;
 
     tempPMs[idx] = trimmed;
     tempExpenses.forEach(item => { if (item.method === oldVal) item.method = trimmed; });
