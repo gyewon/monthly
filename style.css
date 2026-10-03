@@ -436,7 +436,7 @@ input:checked + .slider:before { transform: translateX(16px); }
 
 .financial-flow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-start;
   gap: 8px;
   flex-wrap: wrap;
@@ -447,6 +447,7 @@ input:checked + .slider:before { transform: translateX(16px); }
   min-width: 110px;
   display: flex;
   flex-direction: column;
+  padding-top: 12px;
 }
 .flow-label {
   font-size: 0.95rem;
@@ -455,6 +456,7 @@ input:checked + .slider:before { transform: translateX(16px); }
 .flow-operator {
   font-size: 1.3rem;
   padding: 0 4px;
+  margin-top: 36px;
 }
 .highlight-box {
   background: rgba(99, 102, 241, 0.08);
