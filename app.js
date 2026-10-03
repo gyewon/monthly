@@ -2909,10 +2909,14 @@ function renderCharts() {
       catMap['남은 잔액'] = calcs.remainingBalance;
     }
 
-    const labels = Object.keys(catMap);
-    const dataValues = Object.values(catMap);
+    const sortedEntries = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
     
-    const bgColors = labels.map(cat => {
+    // Create original categories for color mapping, and formatted labels for display
+    const originalCats = sortedEntries.map(e => e[0]);
+    const labels = sortedEntries.map(e => `${e[0]} (${formatKRW(e[1])})`);
+    const dataValues = sortedEntries.map(e => e[1]);
+    
+    const bgColors = originalCats.map(cat => {
       const badgeClass = getAllocCategoryBadgeClass(cat);
       switch(badgeClass) {
         case 'badge-info': return '#06b6d4';
@@ -2943,11 +2947,12 @@ function renderCharts() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: { padding: { top: 15 } },
         plugins: {
           legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 } } },
           tooltip: {
             callbacks: {
-              label: (ctx) => `${ctx.label}: ${formatKRW(ctx.raw)}`
+              label: (ctx) => `${ctx.label}`
             }
           }
         },
