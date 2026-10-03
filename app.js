@@ -570,7 +570,7 @@ function renderAll() {
   // Generate Income Breakdown by Category
   const incomeByCategory = {};
   (appState.incomes || []).forEach(inc => {
-    const cat = inc.title || '기타수입';
+    const cat = inc.category || inc.title || '기본급 (급여)';
     const amt = Number(inc.amount) || 0;
     incomeByCategory[cat] = (incomeByCategory[cat] || 0) + amt;
   });
