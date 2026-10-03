@@ -258,6 +258,18 @@ function normalizeAllocationItem(item) {
 }
 
 function normalizeState(state) {
+  if (!state.categories) state.categories = {};
+  if (!state.categories.allocCategories) {
+    state.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
+  }
+  if (!state.simulationCategories || state.simulationCategories.length === 0) {
+    state.simulationCategories = [
+      state.categories.allocCategories[1], 
+      state.categories.allocCategories[2], 
+      state.categories.allocCategories[4]
+    ].filter(Boolean);
+  }
+
   // Split the former combined 곗돈 row into the current transfer schedule.
   if (state && Array.isArray(state.fixedExpenses)) {
     const legacyIndex = state.fixedExpenses.findIndex(item => item && item.name === '곗돈');
@@ -3017,9 +3029,9 @@ function renderSavingsProjection() {
     ...(appState.allocations?.dongwook || []).map(i => ({ ...i, pathStr: 'allocations.dongwook' }))
   ];
 
-  const allocCats = appState.categories?.allocCategories || ['저축/적금', '투자/연금', '비상금/경조사'];
+  const allocCats = appState.categories?.allocCategories || ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
   
-  if (!appState.simulationCategories) {
+  if (!appState.simulationCategories || appState.simulationCategories.length === 0) {
     appState.simulationCategories = [allocCats[1], allocCats[2], allocCats[4]].filter(Boolean);
   }
 
@@ -3183,7 +3195,7 @@ function renderSavingsProjection() {
         labels: labels,
         datasets: [
           {
-            label: catSavings,
+            label: allocCats[1],
             data: savingsData,
             borderColor: '#10b981',
             backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -3193,7 +3205,7 @@ function renderSavingsProjection() {
             pointHoverRadius: 6
           },
           {
-            label: catInvest,
+            label: allocCats[2],
             data: investData,
             borderColor: '#6366f1',
             backgroundColor: 'rgba(99, 102, 241, 0.1)',
@@ -3203,7 +3215,7 @@ function renderSavingsProjection() {
             pointHoverRadius: 6
           },
           {
-            label: catEmergency,
+            label: allocCats[4],
             data: emergencyData,
             borderColor: '#f59e0b',
             backgroundColor: 'rgba(245, 158, 11, 0.1)',
