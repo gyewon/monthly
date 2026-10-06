@@ -284,9 +284,7 @@ function normalizeState(state) {
   if (!state.incomes) state.incomes = [];
   if (!state.simulationItems) state.simulationItems = [];
   if (!state.categories.allocCategories) {
-    state.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사', '현금'];
-  } else if (!state.categories.allocCategories.includes('현금')) {
-    state.categories.allocCategories.push('현금');
+    state.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
   }
 
   if (!state.simulationCategories || state.simulationCategories.length === 0) {
@@ -2995,6 +2993,82 @@ function openAddFixedExpenseModal() {
     closeModal();
     saveState();
     showToast('고정지출 항목이 추가되었습니다.');
+  };
+}
+
+// 카테고리 관리 모달 창
+window.openCategoryManagerModal = function() {
+  const modal = document.getElementById('item-modal');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+
+  title.innerText = '카테고리 관리';
+
+  const cats = appState.categories?.allocCategories || [];
+  
+  function renderCategoryList() {
+    return cats.map((c, i) => `
+      <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+        <input type="text" id="cat-input-${i}" class="form-control" value="${c}">
+        <button class="btn btn-danger" onclick="document.getElementById('cat-input-${i}').value = ''; this.parentElement.style.display='none';">삭제</button>
+      </div>
+    `).join('') + `
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <input type="text" id="new-cat-input" class="form-control" placeholder="새 카테고리 추가">
+      </div>
+    `;
+  }
+
+  body.innerHTML = `
+    <div class="form-group" id="category-manager-list">
+      <label>자산/지출 카테고리 목록</label>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
+        카테고리 이름을 수정하거나 빈칸으로 만들고 삭제를 누르면 삭제됩니다.
+      </p>
+      ${renderCategoryList()}
+    </div>
+  `;
+
+  modal.classList.add('active');
+
+  document.getElementById('modal-save-btn').onclick = () => {
+    try {
+      const newCats = [];
+      
+      // 기존 항목 수정 확인
+      for(let i=0; i<cats.length; i++) {
+        const input = document.getElementById(`cat-input-${i}`);
+        if(input && input.parentElement.style.display !== 'none' && input.value.trim() !== '') {
+          newCats.push(input.value.trim());
+        }
+      }
+
+      // 새 항목 추가 확인
+      const newCatInput = document.getElementById('new-cat-input');
+      if (newCatInput && newCatInput.value.trim() !== '') {
+        if(!newCats.includes(newCatInput.value.trim())) {
+          newCats.push(newCatInput.value.trim());
+        }
+      }
+      
+      if(newCats.length === 0) return alert("최소 1개의 카테고리는 필요합니다.");
+
+      // 변경사항을 시뮬레이션 카테고리에도 반영 (삭제된 건 빼고, 추가된 건 넣지 않음. 시뮬 카테고리는 이름 변경만 추적하기 애매하므로 전체 검사)
+      // 그냥 새로 덮어씌움
+      appState.categories.allocCategories = newCats;
+      
+      // 시뮬레이션 카테고리에서 삭제된 카테고리 제거
+      if(appState.simulationCategories) {
+        appState.simulationCategories = appState.simulationCategories.filter(c => newCats.includes(c));
+      }
+      
+      closeModal();
+      saveState();
+      showToast('카테고리가 업데이트되었습니다.');
+    } catch (e) {
+      alert('저장 중 오류가 발생했습니다: ' + e.message);
+      console.error(e);
+    }
   };
 }
 
