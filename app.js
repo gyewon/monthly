@@ -3368,11 +3368,6 @@ function renderSavingsProjection() {
         }
       }
 
-      // If not paid this month, it means one more payment is remaining
-      if (!item.isPaid) {
-        itemMonthsDiff += 1;
-      }
-
       const itemExpected = currentBal + (amt * itemMonthsDiff);
       totalExpectedAssets += itemExpected;
 
@@ -3384,9 +3379,6 @@ function renderSavingsProjection() {
         <td><span class="badge ${getAllocCategoryBadgeClass(item.catLabel)}">${item.catLabel}</span></td>
         <td class="cell-amount"><div class="editable-cell" title="클릭하여 기납입액 수정" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalance', 'number')">${formatKRW(currentBal)}</div></td>
         <td style="text-align:center;"><div class="editable-cell text-muted" title="클릭하여 기준일자 입력 (예: 20240520 또는 2024.05.20)" style="font-size: 0.85rem;" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalanceDate', 'text')">${displayDate}</div></td>
-        <td style="text-align:center;">
-          <input type="checkbox" ${item.isPaid ? 'checked' : ''} onchange="toggleSimAllocPaid('${item.pathStr}', '${item.id}', this.checked)" style="transform: scale(1.2); cursor:pointer;">
-        </td>
         <td class="cell-amount">${formatKRW(amt)}</td>
         <td class="cell-amount" style="font-weight:700; color:var(--accent-primary);">${formatKRW(itemExpected)}</td>
       `;
@@ -3401,7 +3393,7 @@ function renderSavingsProjection() {
       totalTr.innerHTML = `
         <td colspan="3" style="text-align:right;">합계</td>
         <td class="cell-amount">${formatKRW(currentAssets)}</td>
-        <td colspan="2"></td>
+        <td></td>
         <td class="cell-amount">${formatKRW(monthlyTotal)}</td>
         <td class="cell-amount" style="color:var(--accent-primary);">${formatKRW(totalExpectedAssets)}</td>
       `;
@@ -3480,10 +3472,6 @@ function renderSavingsProjection() {
           }
         }
         
-        if (!item.isPaid) {
-          diff += 1;
-        }
-
         expectedAtM += currentBal + (amt * diff);
       });
       totalData.push(expectedAtM);
