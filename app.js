@@ -3012,28 +3012,33 @@ function openAddSimItemModal() {
   `;
 
   document.getElementById('modal-save-btn').onclick = () => {
-    const name = document.getElementById('sim-item-name').value.trim();
-    if (!name) return alert('항목명을 입력하세요.');
-    
-    if (!appState.simulationItems) appState.simulationItems = [];
-    
-    const rawAmt = document.getElementById('sim-item-amt').value.replace(/,/g, '');
-    const rawBal = document.getElementById('sim-item-bal').value.replace(/,/g, '');
+    try {
+      const name = document.getElementById('sim-item-name').value.trim();
+      if (!name) return alert('항목명을 입력하세요.');
+      
+      if (!appState.simulationItems) appState.simulationItems = [];
+      
+      const rawAmt = document.getElementById('sim-item-amt').value.replace(/,/g, '');
+      const rawBal = document.getElementById('sim-item-bal').value.replace(/,/g, '');
 
-    appState.simulationItems.push({
-      id: 'sim_cust_' + Date.now(),
-      name: name,
-      catLabel: document.getElementById('sim-item-cat').value,
-      category: document.getElementById('sim-item-cat').value,
-      amount: Number(rawAmt) || 0,
-      currentBalance: Number(rawBal) || 0,
-      currentBalanceDate: document.getElementById('sim-item-date').value || '',
-      day: '-'
-    });
-    
-    saveState();
-    closeModal();
-    showToast('시뮬레이션 전용 항목이 추가되었습니다.');
+      appState.simulationItems.push({
+        id: 'sim_cust_' + Date.now(),
+        name: name,
+        catLabel: document.getElementById('sim-item-cat').value,
+        category: document.getElementById('sim-item-cat').value,
+        amount: Number(rawAmt) || 0,
+        currentBalance: Number(rawBal) || 0,
+        currentBalanceDate: document.getElementById('sim-item-date').value || '',
+        day: '-'
+      });
+      
+      closeModal(); // 모달을 먼저 닫아 UI 잔상 방지
+      saveState();
+      showToast('시뮬레이션 전용 항목이 추가되었습니다.');
+    } catch (e) {
+      alert('저장 중 오류가 발생했습니다: ' + e.message);
+      console.error(e);
+    }
   };
   
   modal.classList.add('active');
