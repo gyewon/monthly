@@ -3017,9 +3017,14 @@ function openAddSimItemModal() {
     </div>
     <div class="form-group">
       <label>카테고리</label>
-      <select id="sim-item-cat" class="form-select">
+      <select id="sim-item-cat" class="form-select" onchange="if(this.value === '_custom') { document.getElementById('sim-item-cat-custom-container').style.display = 'block'; } else { document.getElementById('sim-item-cat-custom-container').style.display = 'none'; }">
         ${catOptions}
+        <option value="_custom">+ 새 카테고리 직접 입력</option>
       </select>
+    </div>
+    <div class="form-group" id="sim-item-cat-custom-container" style="display: none;">
+      <label>새 카테고리명</label>
+      <input type="text" id="sim-item-cat-custom" class="form-control" placeholder="예: 달러, 금, 부동산 등">
     </div>
     <div class="form-group">
       <label>월 납입액 (원)</label>
@@ -3054,11 +3059,27 @@ function openAddSimItemModal() {
       const rawAmt = document.getElementById('sim-item-amt').value.replace(/,/g, '');
       const rawBal = document.getElementById('sim-item-bal').value.replace(/,/g, '');
 
+      let selectedCat = document.getElementById('sim-item-cat').value;
+      if (selectedCat === '_custom') {
+        selectedCat = document.getElementById('sim-item-cat-custom').value.trim();
+        if (!selectedCat) return alert('새 카테고리명을 입력하세요.');
+        
+        // Add to allocCategories if not present
+        if (!appState.categories.allocCategories.includes(selectedCat)) {
+          appState.categories.allocCategories.push(selectedCat);
+        }
+        
+        // Add to simulationCategories if not present
+        if (!appState.simulationCategories.includes(selectedCat)) {
+          appState.simulationCategories.push(selectedCat);
+        }
+      }
+
       appState.simulationItems.push({
         id: 'sim_cust_' + Date.now(),
         name: name,
-        catLabel: document.getElementById('sim-item-cat').value,
-        category: document.getElementById('sim-item-cat').value,
+        catLabel: selectedCat,
+        category: selectedCat,
         amount: Number(rawAmt) || 0,
         currentBalance: Number(rawBal) || 0,
         currentBalanceDate: document.getElementById('sim-item-date').value || '',
