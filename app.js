@@ -3387,6 +3387,9 @@ function renderSavingsProjection() {
   if (simEmergencyEl) simEmergencyEl.innerText = formatKRW(monthlyEmergency);
   if (simTotalEl) simTotalEl.innerText = formatKRW(monthlyTotal);
 
+  let currentAssets = 0;
+  let totalExpectedAssets = 0;
+
   // Render detail table
   const detailTbody = document.querySelector('#table-savings-detail tbody');
   if (detailTbody) {
@@ -3414,8 +3417,8 @@ function renderSavingsProjection() {
     const simTargetLabel = document.getElementById('sim-target-date-label');
     if (simTargetLabel) simTargetLabel.innerText = `${targetY}년 ${targetM}월`;
 
-    let currentAssets = 0;
-    let totalExpectedAssets = 0;
+    currentAssets = 0;
+    totalExpectedAssets = 0;
 
     allItems.forEach(item => {
       const amt = Number(item.amount) || 0;
@@ -3463,7 +3466,7 @@ function renderSavingsProjection() {
       const catHtml = item.isCustom ? `<span class="badge ${getAllocCategoryBadgeClass(item.catLabel || item.category)}">${item.catLabel || item.category}</span>` : `<span class="badge ${getAllocCategoryBadgeClass(item.catLabel || item.category)}">${item.catLabel || item.category}</span>`;
       const delHtml = item.isCustom ? ` <i class="fa-solid fa-times text-danger" style="cursor:pointer;" onclick="deleteSimItem('${item.id}')" title="삭제"></i>` : '';
       tr.innerHTML = `
-        <td>${nameHtml}${delHtml}</td>
+        <td style="display: flex; align-items: center; gap: 8px;">${nameHtml}${delHtml}</td>
         <td style="text-align:center;"><span class="text-muted" style="font-size:0.9em; font-weight:600;">${dayText}</span></td>
         <td>${catHtml}</td>
         <td class="cell-amount"><div class="editable-cell" title="클릭하여 기납입액 수정" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalance', 'number')">${formatKRW(currentBal)}</div></td>
