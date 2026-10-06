@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initApp() {
   setupEventListeners();
-  
+
   const savedTab = localStorage.getItem('activeTab') || 'dashboard';
   const targetBtn = document.querySelector(`.nav-item[data-tab="${savedTab}"]`);
   if (targetBtn) {
@@ -287,8 +287,8 @@ function normalizeState(state) {
   }
   if (!state.simulationCategories || state.simulationCategories.length === 0) {
     state.simulationCategories = [
-      state.categories.allocCategories[1], 
-      state.categories.allocCategories[2], 
+      state.categories.allocCategories[1],
+      state.categories.allocCategories[2],
       state.categories.allocCategories[4]
     ].filter(Boolean);
   }
@@ -429,7 +429,7 @@ async function syncFromSupabase() {
     } else if (data && data.data) {
       const serverState = data.data;
       const localStateStr = localStorage.getItem('dongwook_gyewon_budget_app_v2');
-      
+
       // Timestamp based resolution to prevent data loss on rapid refresh
       if (localStateStr) {
         try {
@@ -442,7 +442,7 @@ async function syncFromSupabase() {
             updateSupabaseBadge(true);
             return;
           }
-        } catch(e) {}
+        } catch (e) { }
       }
 
       appState = normalizeState(serverState);
@@ -572,10 +572,10 @@ function renderAll() {
   // Render KPI Banner
   document.getElementById('kpi-total-income').innerText = formatKRW(calcs.totalIncome);
   document.getElementById('kpi-total-expenses').innerText = formatKRW(calcs.totalExpenses);
-  
+
   const remainElem = document.getElementById('kpi-remaining-balance');
   remainElem.innerText = formatKRW(calcs.remainingBalance);
-  
+
   remainElem.classList.remove('text-danger', 'zero');
   if (calcs.remainingBalance < 0) {
     remainElem.classList.add('text-danger');
@@ -598,7 +598,7 @@ function renderAll() {
     .sort((a, b) => b[1] - a[1]) // Sort descending by amount
     .map(([cat, amt]) => `<span class="badge ${getCategoryBadgeClass(cat)}">${cat} ${formatCompactKRW(amt)}</span>`)
     .join(' ');
-  
+
   const breakdownElem = document.getElementById('kpi-income-breakdown');
   if (breakdownElem) {
     breakdownElem.innerHTML = breakdownHTML;
@@ -612,7 +612,7 @@ function renderAll() {
   if (varElem) {
     varElem.innerText = formatKRW(variableTotal) + '원';
   }
-  
+
   const pSavingsElem = document.getElementById('kpi-pure-savings');
   const pInvestElem = document.getElementById('kpi-pure-investment');
   const pEmergencyElem = document.getElementById('kpi-pure-emergency');
@@ -629,7 +629,7 @@ function renderAll() {
   if (pLabelSavings) pLabelSavings.innerText = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[1] : '저축';
   if (pLabelInvest) pLabelInvest.innerText = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[2] : '투자';
   if (pLabelEmergency) pLabelEmergency.innerText = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories[4] : '비상금';
-  
+
   document.getElementById('kpi-savings-rate').innerHTML = `<span style="color: var(--accent-danger);">${calcs.savingsRate}</span>%`;
 
   // Render Tables
@@ -654,7 +654,7 @@ function getCategoryBadgeClass(category) {
   if (category.includes('부수입') || category.includes('알바')) return 'badge-info';
   if (category.includes('투자') || category.includes('연금') || category.includes('배당')) return 'badge-primary';
   if (category.includes('기타수입') || category.includes('기타 수입')) return 'badge-total';
-  
+
   if (category.includes('생활비')) return 'badge-info';
   if (category.includes('저축') || category.includes('적금')) return 'badge-success';
   if (category.includes('주거') || category.includes('관리비')) return 'badge-gyewon';
@@ -667,7 +667,7 @@ function getCategoryBadgeClass(category) {
 
 function getPaymentMethodHTML(method) {
   if (!method || method === '-') return '<span class="text-muted">-</span>';
-  
+
   let company = method;
   if (appState.categories?.paymentMethodCompanies?.[method]) {
     company = appState.categories.paymentMethodCompanies[method];
@@ -678,18 +678,18 @@ function getPaymentMethodHTML(method) {
   let color = '#94a3b8'; // gray
   let bg = '#fff';
 
-  if (company.includes('현금')) { 
-    icon = 'fa-solid fa-money-bill-wave'; color = '#10b981'; 
-  } else if (company.includes('하나')) { 
-    logoUrl = 'https://www.google.com/s2/favicons?domain=hanabank.com&sz=64'; 
-  } else if (company.includes('우리')) { 
-    logoUrl = 'https://www.google.com/s2/favicons?domain=wooricard.com&sz=64'; 
-  } else if (company.includes('신한')) { 
-    logoUrl = 'https://www.google.com/s2/favicons?domain=shinhancard.com&sz=64'; 
-  } else if (company.includes('삼성')) { 
-    logoUrl = 'https://www.google.com/s2/favicons?domain=samsung.com&sz=64'; 
-  } else if (company.includes('토스')) { 
-    logoUrl = 'https://www.google.com/s2/favicons?domain=toss.im&sz=64'; 
+  if (company.includes('현금')) {
+    icon = 'fa-solid fa-money-bill-wave'; color = '#10b981';
+  } else if (company.includes('하나')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=hanabank.com&sz=64';
+  } else if (company.includes('우리')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=wooricard.com&sz=64';
+  } else if (company.includes('신한')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=shinhancard.com&sz=64';
+  } else if (company.includes('삼성')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=samsung.com&sz=64';
+  } else if (company.includes('토스')) {
+    logoUrl = 'https://www.google.com/s2/favicons?domain=toss.im&sz=64';
   } else if (company.includes('국민') || company.includes('KB')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=kbstar.com&sz=64';
   } else if (company.includes('현대')) {
@@ -701,12 +701,12 @@ function getPaymentMethodHTML(method) {
   } else if (company.includes('카카오')) {
     logoUrl = 'https://www.google.com/s2/favicons?domain=kakaobank.com&sz=64';
     bg = '#fee500';
-  } else if (company.includes('자동이체') || company.includes('계좌')) { 
-    icon = 'fa-solid fa-building-columns'; color = '#c084fc'; 
+  } else if (company.includes('자동이체') || company.includes('계좌')) {
+    icon = 'fa-solid fa-building-columns'; color = '#c084fc';
   }
-  
-  const iconElement = logoUrl 
-    ? `<img src="${logoUrl}" alt="${method}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; background: ${bg}; vertical-align: middle; box-shadow: 0 0 2px rgba(255,255,255,0.2);">` 
+
+  const iconElement = logoUrl
+    ? `<img src="${logoUrl}" alt="${method}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover; background: ${bg}; vertical-align: middle; box-shadow: 0 0 2px rgba(255,255,255,0.2);">`
     : `<i class="${icon}" style="color:${color}; font-size:16px; width:18px; text-align:center;"></i>`;
 
   return `<span style="display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:14.5px; color:#f8fafc; cursor:pointer; padding:5px 8px; border-radius:6px; background-color:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">${iconElement} ${method}</span>`;
@@ -715,7 +715,7 @@ function getPaymentMethodHTML(method) {
 function getFixedCategoryHTML(category) {
   if (!category || category === '-') return '<span class="text-muted">-</span>';
   let emoji = '\ud83c\udff7\ufe0f';
-  
+
   if (category.includes('\uc6a9\ub3c8')) emoji = '\ud83d\udc5b';
   else if (category.includes('\uacb0\ub3c8') || category.includes('\uacb0')) emoji = '\ud83d\udc65';
   else if (category.includes('\uad6c\ub3c5')) emoji = '\u25b6\ufe0f';
@@ -871,12 +871,12 @@ function renderFixedExpensesTable() {
       paidCount++;
       paidSum += amt;
       const c = item.category || '기타';
-      
+
       // Use actual method name as requested
       let m = item.method || '기타';
       m = m.trim();
       let majorCat = getPMType(m);
-      
+
       catData[c] = (catData[c] || 0) + amt;
       methodData[majorCat] = (methodData[majorCat] || 0) + amt;
     }
@@ -924,15 +924,15 @@ function renderFixedExpensesTable() {
   const fixedBudgetElem = document.getElementById('fixed-stat-fixed-budget');
   const livingRemainElem = document.getElementById('fixed-stat-remaining');
   const dashLivingRemainElem = document.getElementById('dash-fixed-stat-remaining');
-  
+
   if (livingBudgetElem) livingBudgetElem.innerText = formatKRW(livingBudget);
   if (fixedBudgetElem) fixedBudgetElem.innerText = formatKRW(fixedExpenseBudget);
-  
+
   if (livingRemainElem) {
     livingRemainElem.innerText = formatKRW(fixedRemaining);
     livingRemainElem.className = `value ${fixedRemaining < 0 ? 'text-danger' : 'text-success'}`;
   }
-  
+
   if (dashLivingRemainElem) {
     dashLivingRemainElem.innerText = formatKRW(fixedRemaining);
     dashLivingRemainElem.style.color = fixedRemaining < 0 ? 'var(--danger-color)' : 'var(--success-color)';
@@ -944,7 +944,7 @@ function renderFixedExpensesTable() {
   if (completionElem) {
     completionElem.innerHTML = `${paidCount} / ${totalCount} (<strong style="font-weight:900;">${pct}%</strong>)`;
   }
-  
+
   const dateReqs = {};
   filtered.forEach(item => {
     if (!item.isPaid) return; // [표시/완료] 체크된 항목만 집계
@@ -958,7 +958,7 @@ function renderFixedExpensesTable() {
   if (reqContainer) {
     reqContainer.innerHTML = '';
     const sortedDays = Object.keys(dateReqs).sort((a, b) => (parseInt(a) || 99) - (parseInt(b) || 99));
-    
+
     if (sortedDays.length === 0) {
       reqContainer.innerHTML = '<div class="text-muted" style="text-align:center; margin-top:40px;">완료된 결제 내역이 없습니다.</div>';
     } else {
@@ -966,7 +966,7 @@ function renderFixedExpensesTable() {
       sortedDays.forEach(d => {
         const stats = dateReqs[d];
         runningBalance -= stats.paid; // 완료된 금액 차감
-        
+
         const row = document.createElement('div');
         row.style.display = 'flex';
         row.style.justifyContent = 'space-between';
@@ -1011,10 +1011,10 @@ function drawFixedCharts(catData, methodData, fixedRemaining) {
         const pct = total > 0 ? Math.round((value / total) * 100) : 0;
         let formattedVal = value.toLocaleString();
         const isHidden = !chart.getDataVisibility(i);
-        
-        const map = {'0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵','%':'%'};
+
+        const map = { '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯', '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳', '8': '𝟴', '9': '𝟵', '%': '%' };
         const boldPct = `${pct}%`.split('').map(c => map[c] || c).join('');
-        
+
         return {
           text: `${label} ${boldPct} (${formattedVal}원)`,
           fillStyle: dataset.backgroundColor[i],
@@ -1033,14 +1033,14 @@ function drawFixedCharts(catData, methodData, fixedRemaining) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { 
-        position: 'right', 
-        labels: { 
-          boxWidth: 12, 
+      legend: {
+        position: 'right',
+        labels: {
+          boxWidth: 12,
           font: { size: 14, weight: 'normal' },
           color: '#f8fafc',
           generateLabels: generateChartLabels
-        } 
+        }
       },
       tooltip: {
         callbacks: {
@@ -1051,7 +1051,7 @@ function drawFixedCharts(catData, methodData, fixedRemaining) {
   };
 
   const catBaseColors = [
-    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
     '#06b6d4', '#f43f5e', '#14b8a6', '#6366f1', '#f97316',
     '#ec4899', '#84cc16'
   ];
@@ -1064,7 +1064,7 @@ function drawFixedCharts(catData, methodData, fixedRemaining) {
   // Sort data descending by amount
   const sortedCatLabels = Object.keys(catData).sort((a, b) => catData[b] - catData[a]);
   const sortedCatValues = sortedCatLabels.map(k => catData[k]);
-  
+
   if (fixedRemaining > 0) {
     sortedCatLabels.push('미사용금액');
     sortedCatValues.push(fixedRemaining);
@@ -1123,7 +1123,7 @@ function renderTimeline() {
     let rawDay = inc.day || '미지정';
     let dayKey = rawDay.includes('일') ? rawDay : (rawDay + '일');
     if (!groups[dayKey]) groups[dayKey] = [];
-    
+
     // Fix: person string is already Korean in some datasets, handle both cases
     let personName = inc.person;
     if (personName === 'gyewon') personName = '계원';
@@ -1237,31 +1237,31 @@ function renderTimeline() {
       </div>
       <ul class="timeline-item-list">
         ${items.map(i => {
-          let badgeClass = 'badge-secondary';
-          let badgeText = '지출';
-          
-          if (i.type === 'INCOME') {
-            badgeClass = 'badge-salary';
-            badgeText = '수입';
-          } else if (i.type === 'FIXED') {
-            badgeClass = 'badge-danger';
-            badgeText = '고정비';
-          } else if (i.type === 'ALLOCATION') {
-            badgeClass = getCategoryBadgeClass(i.category);
-            if ((i.category || '').includes('저축') || (i.category || '').includes('적금')) badgeText = '저축';
-            else if ((i.category || '').includes('투자') || (i.category || '').includes('연금')) badgeText = '투자';
-            else if ((i.category || '').includes('생활비')) badgeText = '생활비';
-            else if ((i.category || '').includes('비상금') || (i.category || '').includes('경조사')) badgeText = '비상금';
-            else badgeText = '지출';
-          }
+      let badgeClass = 'badge-secondary';
+      let badgeText = '지출';
 
-          return `
+      if (i.type === 'INCOME') {
+        badgeClass = 'badge-salary';
+        badgeText = '수입';
+      } else if (i.type === 'FIXED') {
+        badgeClass = 'badge-danger';
+        badgeText = '고정비';
+      } else if (i.type === 'ALLOCATION') {
+        badgeClass = getCategoryBadgeClass(i.category);
+        if ((i.category || '').includes('저축') || (i.category || '').includes('적금')) badgeText = '저축';
+        else if ((i.category || '').includes('투자') || (i.category || '').includes('연금')) badgeText = '투자';
+        else if ((i.category || '').includes('생활비')) badgeText = '생활비';
+        else if ((i.category || '').includes('비상금') || (i.category || '').includes('경조사')) badgeText = '비상금';
+        else badgeText = '지출';
+      }
+
+      return `
             <li>
               <span><span class="badge ${badgeClass}">${badgeText}</span> ${i.name} <small class="text-muted">(${i.method})</small></span>
               <strong class="${i.type === 'INCOME' ? 'text-success' : 'text-danger'}">${i.type === 'INCOME' ? '+' : '-'}${formatKRW(i.amount)}</strong>
             </li>
           `;
-        }).join('')}
+    }).join('')}
       </ul>
     `;
     container.appendChild(card);
@@ -1272,7 +1272,7 @@ function renderTimeline() {
 function getPMType(pm) {
   if (!pm) return '미분류';
   const pmStr = String(pm);
-  
+
   if (!appState.categories.paymentMethodTypes) {
     appState.categories.paymentMethodTypes = {};
   }
@@ -1298,10 +1298,10 @@ function renderPaymentMethodSummary() {
     let method = item.method || '기타';
     method = method.trim();
     const amt = Number(item.amount) || 0;
-    
+
     pmMap[method] = (pmMap[method] || 0) + amt;
     totalFixed += amt;
-    
+
     const major = getPMType(method);
     groupMap[major] = (groupMap[major] || 0) + amt;
   });
@@ -1324,7 +1324,7 @@ function renderPaymentMethodSummary() {
     const colors = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
     let cIdx = 0;
 
-    Object.entries(groupMap).sort((a,b)=>b[1]-a[1]).forEach(([major, amt]) => {
+    Object.entries(groupMap).sort((a, b) => b[1] - a[1]).forEach(([major, amt]) => {
       const color = colors[cIdx % colors.length];
       html += `
         <div class="pm-card pm-card-total" style="border: 1px solid ${color}; background-color: ${color}10; flex: 1; min-width: 150px;">
@@ -1402,7 +1402,7 @@ function renderCategoryAllocationSummary() {
   const catMap = {};
   let totalAlloc = 0;
   const allAllocations = [...(appState.allocations?.gyewon || []), ...(appState.allocations?.dongwook || [])];
-  
+
   allAllocations.forEach(item => {
     const cat = item.category || '기타';
     const amt = Number(item.amount || 0);
@@ -1446,7 +1446,7 @@ function renderCategoryAllocationSummary() {
   sortedCats.forEach(([cat, amt]) => {
     const badgeClass = getAllocCategoryBadgeClass(cat);
     const pct = ((amt / baseIncome) * 100).toFixed(1);
-    
+
     const card = document.createElement('div');
     card.className = 'pm-card';
     card.innerHTML = `
@@ -1478,7 +1478,11 @@ function editInlineCell(element, pathStr, itemId, fieldName, type = 'text') {
   const originalVal = currVal;
 
   const input = document.createElement('input');
-  input.type = 'text'; // Always use text to allow commas
+  if (type === 'month') {
+    input.type = 'month';
+  } else {
+    input.type = 'text'; // Always use text to allow commas
+  }
   input.className = 'cell-input';
 
   if (type === 'number') {
@@ -1538,7 +1542,7 @@ function editInlineCell(element, pathStr, itemId, fieldName, type = 'text') {
     } else if (fieldName === 'day' || fieldName === 'schedule') {
       newVal = formatDayInput(newVal);
     }
-    
+
     setFieldValue(pathStr, itemId, fieldName, newVal);
     saveState();
   };
@@ -1595,7 +1599,7 @@ function deleteItem(pathStr, itemId) {
   }
 }
 
-window.toggleAllocAutoTransfer = function(pathStr, itemId) {
+window.toggleAllocAutoTransfer = function (pathStr, itemId) {
   let list = resolvePath(pathStr);
   if (!list) return;
   let item = list.find(i => i.id === itemId);
@@ -1624,7 +1628,7 @@ window.toggleAllocAutoTransfer = function(pathStr, itemId) {
   }
 };
 
-window.toggleFixedAutoTransfer = function(itemId) {
+window.toggleFixedAutoTransfer = function (itemId) {
   let item = appState.fixedExpenses.find(i => i.id === itemId);
   if (item) {
     let currentlyAuto = false;
@@ -1646,12 +1650,12 @@ window.toggleFixedAutoTransfer = function(itemId) {
   }
 };
 
-window.sortAllocations = function(person, field) {
+window.sortAllocations = function (person, field) {
   if (!appState.allocations[person]) return;
-  
+
   if (!window.sortState) window.sortState = {};
   if (!window.sortState[person]) window.sortState[person] = { field: null, asc: true };
-  
+
   const state = window.sortState[person];
   if (state.field === field) {
     state.asc = !state.asc; // Toggle sort direction
@@ -1659,7 +1663,7 @@ window.sortAllocations = function(person, field) {
     state.field = field;
     state.asc = true;
   }
-  
+
   appState.allocations[person].sort((a, b) => {
     let valA = a[field] || '';
     let valB = b[field] || '';
@@ -1667,17 +1671,17 @@ window.sortAllocations = function(person, field) {
     if (valA > valB) return state.asc ? 1 : -1;
     return 0;
   });
-  
+
   saveState();
   renderAllocationTables();
 };
 
-window.sortFixedExpenses = function(field) {
+window.sortFixedExpenses = function (field) {
   if (!appState.fixedExpenses) return;
-  
+
   if (!window.sortState) window.sortState = {};
   if (!window.sortState.fixedExpenses) window.sortState.fixedExpenses = { field: null, asc: true };
-  
+
   const state = window.sortState.fixedExpenses;
   if (state.field === field) {
     state.asc = !state.asc; // Toggle sort direction
@@ -1685,7 +1689,7 @@ window.sortFixedExpenses = function(field) {
     state.field = field;
     state.asc = true;
   }
-  
+
   appState.fixedExpenses.sort((a, b) => {
     let valA = a[field] || '';
     let valB = b[field] || '';
@@ -1695,17 +1699,17 @@ window.sortFixedExpenses = function(field) {
       let numB = parseInt(valB);
       if (isNaN(numA)) numA = 999;
       if (isNaN(numB)) numB = 999;
-      
+
       if (numA !== numB) {
         return state.asc ? (numA - numB) : (numB - numA);
       }
     }
-    
+
     if (valA < valB) return state.asc ? -1 : 1;
     if (valA > valB) return state.asc ? 1 : -1;
     return 0;
   });
-  
+
   saveState();
   renderFixedExpensesTable();
 };
@@ -1731,7 +1735,7 @@ function toggleAllocPaid(person, itemId, isPaid) {
   }
 }
 
-window.editFlexibleBudget = function() {
+window.editFlexibleBudget = function () {
   const currentVal = appState.flexibleLivingBudget !== undefined ? Number(appState.flexibleLivingBudget) : 1000000;
   const newVal = prompt("유동 생활비(목표 예산)를 입력하세요 (숫자만 입력):", currentVal);
   if (newVal !== null) {
@@ -1848,11 +1852,11 @@ function openCategoryManagerModal(mode) {
   const currentMode = window.currentCategoryModalMode;
 
   const body = document.getElementById('modal-body');
-  
+
   let title = '카테고리 설정 (수입 & 배분 통합 관리)';
   if (currentMode === 'income') title = '카테고리 설정 (수입 통합 관리)';
   else if (currentMode === 'alloc') title = '카테고리 설정 (월급 배분 내역)';
-  
+
   document.getElementById('modal-title').innerText = title;
 
   if (!appState.categories) {
@@ -1951,7 +1955,7 @@ function openCategoryManagerModal(mode) {
   };
 }
 
-window.editRecipientCategory = function(idx) {
+window.editRecipientCategory = function (idx) {
   const oldVal = appState.categories.recipients[idx];
   const newVal = prompt('수입 대상자 카테고리 이름을 수정하세요:', oldVal);
   if (newVal !== null && newVal.trim() !== '' && newVal.trim() !== oldVal) {
@@ -1970,7 +1974,7 @@ window.editRecipientCategory = function(idx) {
   }
 };
 
-window.editIncomeItemCategory = function(idx) {
+window.editIncomeItemCategory = function (idx) {
   const oldVal = appState.categories.incomeItems[idx];
   const newVal = prompt('수입 항목 카테고리 이름을 수정하세요:', oldVal);
   if (newVal !== null && newVal.trim() !== '' && newVal.trim() !== oldVal) {
@@ -1986,7 +1990,7 @@ window.editIncomeItemCategory = function(idx) {
   }
 };
 
-window.addRecipientCategory = function() {
+window.addRecipientCategory = function () {
   const input = document.getElementById('new-recipient-input');
   if (!input) return;
   const val = input.value.trim();
@@ -2000,7 +2004,7 @@ window.addRecipientCategory = function() {
   }
 };
 
-window.deleteRecipientCategory = function(idx) {
+window.deleteRecipientCategory = function (idx) {
   if (appState.categories.recipients.length <= 1) {
     alert('최소 1개 이상의 대상 카테고리가 필요합니다.');
     return;
@@ -2011,7 +2015,7 @@ window.deleteRecipientCategory = function(idx) {
   renderIncomeTables();
 };
 
-window.addIncomeItemCategory = function() {
+window.addIncomeItemCategory = function () {
   const input = document.getElementById('new-item-cat-input');
   if (!input) return;
   const val = input.value.trim();
@@ -2027,7 +2031,7 @@ window.addIncomeItemCategory = function() {
 
 
 
-window.addAllocCategory = function() {
+window.addAllocCategory = function () {
   const input = document.getElementById('new-alloc-cat-input');
   if (!input) return;
   const val = input.value.trim();
@@ -2041,7 +2045,7 @@ window.addAllocCategory = function() {
   }
 };
 
-window.editAllocCategory = function(idx) {
+window.editAllocCategory = function (idx) {
   const oldVal = appState.categories.allocCategories[idx];
   const newVal = prompt('새 배분 카테고리명을 입력하세요:', oldVal);
   if (newVal && newVal.trim() !== '') {
@@ -2058,7 +2062,7 @@ window.editAllocCategory = function(idx) {
   }
 };
 
-window.deleteAllocCategory = function(idx) {
+window.deleteAllocCategory = function (idx) {
   if (appState.categories.allocCategories.length <= 1) {
     alert('최소 1개 이상의 배분 항목이 필요합니다.');
     return;
@@ -2070,7 +2074,7 @@ window.deleteAllocCategory = function(idx) {
 };
 
 // Payment Method CRUD
-window.addPaymentMethod = function() {
+window.addPaymentMethod = function () {
   const input = document.getElementById('new-payment-method-input');
   if (!input) return;
   const val = input.value.trim();
@@ -2085,7 +2089,7 @@ window.addPaymentMethod = function() {
   }
 };
 
-window.editPaymentMethod = function(idx) {
+window.editPaymentMethod = function (idx) {
   const oldVal = appState.categories.paymentMethods[idx];
   const newVal = prompt('결제 수단 이름을 수정하세요:', oldVal);
   if (newVal && newVal.trim() !== '' && newVal.trim() !== oldVal) {
@@ -2102,7 +2106,7 @@ window.editPaymentMethod = function(idx) {
   }
 };
 
-window.deletePaymentMethod = function(idx) {
+window.deletePaymentMethod = function (idx) {
   if ((appState.categories.paymentMethods || []).length <= 1) {
     alert('최소 1개 이상의 결제 수단이 필요합니다.');
     return;
@@ -2122,7 +2126,7 @@ function updateMethodFilterDropdown() {
   sel.innerHTML = `<option value="ALL">전체</option>${methods.map(m => `<option value="${m}" ${current === m ? 'selected' : ''}>${m}</option>`).join('')}`;
 }
 
-window.editFixedExpenseMethod = function(element, itemId) {
+window.editFixedExpenseMethod = function (element, itemId) {
   const item = (appState.fixedExpenses || []).find(i => i.id === itemId);
   if (!item) return;
   const methods = appState.categories?.paymentMethods || [];
@@ -2140,7 +2144,7 @@ window.editFixedExpenseMethod = function(element, itemId) {
   });
 };
 
-window.openPaymentMethodManagerModal = function() {
+window.openPaymentMethodManagerModal = function () {
   document.getElementById('modal-title').innerText = '결제수단 및 카테고리 관리';
   const body = document.getElementById('modal-body');
 
@@ -2163,7 +2167,7 @@ window.openPaymentMethodManagerModal = function() {
   window.onDragStartPM = (e, idx) => { draggedPMIdx = idx; e.dataTransfer.effectAllowed = 'move'; e.target.style.opacity = '0.5'; };
   window.onDragOverPM = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
   window.onDragEndPM = (e) => { e.target.style.opacity = '1'; draggedPMIdx = null; draggedFCatIdx = null; };
-  
+
   window.onDropPM = (e, targetIdx) => {
     e.preventDefault();
     e.stopPropagation();
@@ -2171,11 +2175,11 @@ window.openPaymentMethodManagerModal = function() {
       const draggedVal = tempPMs[draggedPMIdx];
       const targetVal = tempPMs[targetIdx];
       const newType = getPMType(targetVal);
-      
+
       tempPMs.splice(draggedPMIdx, 1);
       const newTargetIdx = tempPMs.indexOf(targetVal);
       tempPMs.splice(newTargetIdx, 0, draggedVal);
-      
+
       if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
       appState.categories.paymentMethodTypes[draggedVal] = newType;
       renderAll();
@@ -2228,8 +2232,8 @@ window.openPaymentMethodManagerModal = function() {
              ondragleave="onDragLeavePMGroup(event)"
              ondrop="onDropPMGroup(event, '${group}')">
           ${groupedPMs[group].map(pm => {
-            const idx = tempPMs.indexOf(pm);
-            return `
+        const idx = tempPMs.indexOf(pm);
+        return `
             <span draggable="true" 
                   ondragstart="onDragStartPM(event, ${idx})" 
                   ondragover="onDragOverPM(event)" 
@@ -2240,7 +2244,8 @@ window.openPaymentMethodManagerModal = function() {
               <i class="fa-solid fa-pen-to-square text-muted" style="cursor:pointer;" title="대분류/소분류 수정" onclick="editPMInModal(${idx})"></i>
               <i class="fa-solid fa-xmark text-muted" style="cursor:pointer;" onclick="deletePMInModal(${idx})"></i>
             </span>
-          `;}).join('')}
+          `;
+      }).join('')}
           <div style="display:inline-flex; align-items:center; margin-left: 8px;">
             <input type="text" id="new-pm-group-input-${group}" class="form-control form-control-sm" style="width:160px;" placeholder="${group.includes('카드') ? '별명, 카드사 (예: 밥,신한)' : '결제수단명 입력'}" onkeydown="if(event.key==='Enter') addPMToGroup('${group}')">
             <button class="btn btn-outline-primary btn-sm" style="margin-left:4px;" onclick="addPMToGroup('${group}')"><i class="fa-solid fa-plus"></i></button>
@@ -2288,7 +2293,7 @@ window.openPaymentMethodManagerModal = function() {
     `;
   };
 
-  window.addPaymentMethodFromModal = function() {
+  window.addPaymentMethodFromModal = function () {
     const input = document.getElementById('new-pm-modal-input');
     const typeInput = document.getElementById('new-pm-modal-type');
     if (!input) return;
@@ -2317,7 +2322,7 @@ window.openPaymentMethodManagerModal = function() {
     }
   };
 
-  window.addPMToGroup = function(groupName) {
+  window.addPMToGroup = function (groupName) {
     const input = document.getElementById(`new-pm-group-input-${groupName}`);
     if (!input) return;
     const rawVal = input.value.trim();
@@ -2346,7 +2351,7 @@ window.openPaymentMethodManagerModal = function() {
     }
   };
 
-  window.addFCatFromModal = function() {
+  window.addFCatFromModal = function () {
     const input = document.getElementById('new-fcat-modal-input');
     if (!input) return;
     const val = input.value.trim();
@@ -2355,13 +2360,13 @@ window.openPaymentMethodManagerModal = function() {
     }
   };
 
-  window.editPMGroupInModal = function(oldGroupName) {
+  window.editPMGroupInModal = function (oldGroupName) {
     const newGroupName = prompt('대분류 이름을 수정하세요:', oldGroupName);
     if (!newGroupName || newGroupName.trim() === '' || newGroupName.trim() === oldGroupName) return;
     const trimmed = newGroupName.trim();
-    
+
     if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
-    
+
     tempPMs.forEach(pm => {
       if (getPMType(pm) === oldGroupName) {
         appState.categories.paymentMethodTypes[pm] = trimmed;
@@ -2370,16 +2375,16 @@ window.openPaymentMethodManagerModal = function() {
     renderAll();
   };
 
-  window.editPMInModal = function(idx) {
+  window.editPMInModal = function (idx) {
     const oldVal = tempPMs[idx];
     const oldType = getPMType(oldVal);
 
     const oldCompany = (appState.categories.paymentMethodCompanies && appState.categories.paymentMethodCompanies[oldVal]) || '';
-    
+
     const isCard = oldType.includes('카드') || oldVal.includes('카드');
     let promptMsg = '결제수단 별명을 수정하세요 (예: 데이트용 카드):';
     let defaultText = oldVal;
-    
+
     if (isCard) {
       promptMsg = '결제수단 별명과 카드사를 쉼표(,)로 구분해서 적어주세요. (예: 밥값카드, 신한)';
       defaultText = oldCompany ? `${oldVal}, ${oldCompany}` : oldVal;
@@ -2403,11 +2408,11 @@ window.openPaymentMethodManagerModal = function() {
 
     tempPMs[idx] = trimmed;
     tempExpenses.forEach(item => { if (item.method === oldVal) item.method = trimmed; });
-    
+
     if (!appState.categories.paymentMethodTypes) appState.categories.paymentMethodTypes = {};
     if (trimmed !== oldVal) delete appState.categories.paymentMethodTypes[oldVal];
     appState.categories.paymentMethodTypes[trimmed] = oldType; // Keep the same company/group
-    
+
     if (!appState.categories.paymentMethodCompanies) appState.categories.paymentMethodCompanies = {};
     if (trimmed !== oldVal) delete appState.categories.paymentMethodCompanies[oldVal];
     if (trimmedCompany) {
@@ -2416,7 +2421,7 @@ window.openPaymentMethodManagerModal = function() {
 
     renderAll();
   };
-  window.deletePMInModal = function(idx) {
+  window.deletePMInModal = function (idx) {
     if (tempPMs.length <= 1) { alert('최소 1개 이상 필요'); return; }
     const oldVal = tempPMs[idx];
     const inUse = tempExpenses.some(item => item.method === oldVal);
@@ -2427,7 +2432,7 @@ window.openPaymentMethodManagerModal = function() {
     tempPMs.splice(idx, 1);
     renderAll();
   };
-  window.editFCatInModal = function(idx) {
+  window.editFCatInModal = function (idx) {
     const oldVal = tempFCats[idx];
     const newVal = prompt('카테고리 이름을 수정하세요:', oldVal);
     if (newVal && newVal.trim() !== '' && newVal.trim() !== oldVal) {
@@ -2437,7 +2442,7 @@ window.openPaymentMethodManagerModal = function() {
       renderAll();
     }
   };
-  window.deleteFCatInModal = function(idx) {
+  window.deleteFCatInModal = function (idx) {
     if (tempFCats.length <= 1) { alert('최소 1개 이상 필요'); return; }
     const oldVal = tempFCats[idx];
     const inUse = tempExpenses.some(item => item.category === oldVal);
@@ -2461,11 +2466,11 @@ window.openPaymentMethodManagerModal = function() {
     updateMethodFilterDropdown();
     closeModal();
   };
-  
+
   document.getElementById('item-modal').classList.add('active');
 };
 
-window.editFixedExpenseCategory = function(element, itemId) {
+window.editFixedExpenseCategory = function (element, itemId) {
   const item = (appState.fixedExpenses || []).find(i => i.id === itemId);
   if (!item) return;
   const cats = appState.categories?.fixedCategories || [];
@@ -2533,14 +2538,14 @@ function openCategoryPickerModal({ title, currentCategory, categoryList, onSelec
   document.getElementById('item-modal').classList.add('active');
 }
 
-window.selectPickedCategory = function(cat) {
+window.selectPickedCategory = function (cat) {
   closeModal();
   if (window._activeCategoryPickerOnSelect) {
     window._activeCategoryPickerOnSelect(cat);
   }
 };
 
-window.promptNewCategoryInPicker = function() {
+window.promptNewCategoryInPicker = function () {
   const newCat = prompt('새 카테고리명을 입력하세요:');
   if (newCat && newCat.trim()) {
     const trimmed = newCat.trim();
@@ -2553,7 +2558,7 @@ window.promptNewCategoryInPicker = function() {
   }
 };
 
-window.editInlineCategory = function(element, incId, evt) {
+window.editInlineCategory = function (element, incId, evt) {
   if (evt) evt.stopPropagation();
 
   const inc = (appState.incomes || []).find(i => i.id === incId);
@@ -2583,7 +2588,7 @@ window.editInlineCategory = function(element, incId, evt) {
   });
 };
 
-window.editInlineAllocCategory = function(element, pathStr, itemId, evt) {
+window.editInlineAllocCategory = function (element, pathStr, itemId, evt) {
   if (evt) evt.stopPropagation();
 
   const list = resolvePath(pathStr);
@@ -2665,7 +2670,7 @@ function openAddIncomeModal() {
     const person = document.getElementById('modal-inc-person').value;
     const title = document.getElementById('modal-inc-cat-select').value;
     if (!title) { alert('수입 항목 카테고리를 선택하세요.'); return; }
-    
+
     const rawAmt = document.getElementById('modal-inc-amount').value.replace(/,/g, '');
     const amount = Number(rawAmt) || 0;
     const dayInputVal = document.getElementById('modal-inc-day').value.trim();
@@ -3013,7 +3018,7 @@ function renderCharts() {
     }
 
     const sortedEntries = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-    
+
     const totalAmount = sortedEntries.reduce((sum, e) => sum + e[1], 0);
     const originalCats = sortedEntries.map(e => e[0]);
     const labels = sortedEntries.map(e => {
@@ -3021,10 +3026,10 @@ function renderCharts() {
       return `${e[0]} ${percentage}% (${formatKRW(e[1])})`;
     });
     const dataValues = sortedEntries.map(e => e[1]);
-    
+
     const bgColors = originalCats.map((cat, index) => {
       const badgeClass = getAllocCategoryBadgeClass(cat);
-      switch(badgeClass) {
+      switch (badgeClass) {
         case 'badge-info': return '#06b6d4';
         case 'badge-success': return '#10b981';
         case 'badge-primary': return '#6366f1';
@@ -3035,8 +3040,8 @@ function renderCharts() {
         case 'badge-remain': return '#84cc16';
         case 'badge-gyewon': return '#fb7185';
         case 'badge-dongwook': return '#38bdf8';
-        case 'badge-secondary': 
-        default: 
+        case 'badge-secondary':
+        default:
           // fallback palette for duplicates
           const fallbackColors = ['#94a3b8', '#cbd5e1', '#64748b', '#475569', '#334155'];
           return fallbackColors[index % fallbackColors.length];
@@ -3060,11 +3065,11 @@ function renderCharts() {
         maintainAspectRatio: false,
         layout: { padding: { top: 15 } },
         plugins: {
-          legend: { 
-            position: 'right', 
-            labels: { 
+          legend: {
+            position: 'right',
+            labels: {
               font: { size: 11 },
-              generateLabels: function(chart) {
+              generateLabels: function (chart) {
                 const data = chart.data;
                 if (data.labels.length && data.datasets.length) {
                   return data.labels.map((label, i) => {
@@ -3084,7 +3089,7 @@ function renderCharts() {
                 }
                 return [];
               }
-            } 
+            }
           },
           tooltip: {
             callbacks: {
@@ -3173,10 +3178,10 @@ function renderCharts() {
           legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 } } },
           tooltip: {
             callbacks: {
-              label: function(context) {
+              label: function (context) {
                 const val = context.raw;
-                const total = context.dataset.data.reduce((a,b)=>a+b,0);
-                const pct = total > 0 ? ((val/total)*100).toFixed(1) : 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
                 return ` ${context.label}: ${formatKRW(val)}원 (${pct}%)`;
               }
             }
@@ -3194,12 +3199,12 @@ let projectionChartInstance = null;
 function renderSavingsProjection() {
   const calcs = calculateTotals();
   const allAllocs = [
-    ...(appState.allocations?.gyewon || []).map(i => ({ ...i, pathStr: 'allocations.gyewon' })), 
+    ...(appState.allocations?.gyewon || []).map(i => ({ ...i, pathStr: 'allocations.gyewon' })),
     ...(appState.allocations?.dongwook || []).map(i => ({ ...i, pathStr: 'allocations.dongwook' }))
   ];
 
   const allocCats = appState.categories?.allocCategories || ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
-  
+
   if (!appState.simulationCategories || appState.simulationCategories.length === 0) {
     appState.simulationCategories = [allocCats[1], allocCats[2], allocCats[4]].filter(Boolean);
   }
@@ -3260,18 +3265,18 @@ function renderSavingsProjection() {
     let targetDateStr = targetDateInput ? targetDateInput.value : '';
     const baseMonthStr = appState.currentMonth || '2026-03';
     const [baseY, baseM] = baseMonthStr.split('-').map(Number);
-    
+
     if (!targetDateStr) {
       const nextY = baseY + Math.floor((baseM + 12 - 1) / 12);
       const nextM = ((baseM + 12 - 1) % 12) + 1;
       targetDateStr = `${nextY}-${String(nextM).padStart(2, '0')}`;
       if (targetDateInput) targetDateInput.value = targetDateStr;
     }
-    
+
     const [targetY, targetM] = targetDateStr.split('-').map(Number);
     let monthsDiff = (targetY - baseY) * 12 + (targetM - baseM);
     if (monthsDiff < 0) monthsDiff = 0;
-    
+
     const simTableLabel = document.getElementById('sim-table-target-label');
     if (simTableLabel) simTableLabel.innerText = `${targetY}년 ${targetM}월`;
 
@@ -3279,12 +3284,30 @@ function renderSavingsProjection() {
     if (simTargetLabel) simTargetLabel.innerText = `${targetY}년 ${targetM}월`;
 
     let currentAssets = 0;
+    let totalExpectedAssets = 0;
+
     allItems.forEach(item => {
       const amt = Number(item.amount) || 0;
       const currentBal = Number(item.currentBalance) || 0;
       currentAssets += currentBal;
 
-      const dateText = item.currentBalanceDate || '-';
+      let itemMonthsDiff = monthsDiff;
+      const dateText = item.currentBalanceDate || '';
+      if (dateText) {
+        const parts = dateText.split(/[-.]/);
+        if (parts.length >= 2) {
+          const itemY = parseInt(parts[0], 10);
+          const itemM = parseInt(parts[1], 10);
+          if (!isNaN(itemY) && !isNaN(itemM)) {
+            itemMonthsDiff = (targetY - itemY) * 12 + (targetM - itemM);
+            if (itemMonthsDiff < 0) itemMonthsDiff = 0;
+          }
+        }
+      }
+
+      const itemExpected = currentBal + (amt * itemMonthsDiff);
+      totalExpectedAssets += itemExpected;
+
       const dayText = item.day && item.day !== '-' ? item.day : '-';
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -3292,9 +3315,9 @@ function renderSavingsProjection() {
         <td style="text-align:center;"><span class="text-muted" style="font-size:0.9em; font-weight:600;">${dayText}</span></td>
         <td><span class="badge ${getAllocCategoryBadgeClass(item.catLabel)}">${item.catLabel}</span></td>
         <td class="cell-amount"><div class="editable-cell" title="클릭하여 기납입액 수정" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalance', 'number')">${formatKRW(currentBal)}</div></td>
-        <td style="text-align:center;"><div class="editable-cell text-muted" title="클릭하여 기준일자 입력 (예: 2024.05)" style="font-size: 0.85rem;" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalanceDate', 'text')">${dateText}</div></td>
+        <td style="text-align:center;"><div class="editable-cell text-muted" title="클릭하여 기준일자 입력 (예: 2024-05)" style="font-size: 0.85rem;" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalanceDate', 'month')">${dateText || '-'}</div></td>
         <td class="cell-amount">${formatKRW(amt)}</td>
-        <td class="cell-amount" style="font-weight:700; color:var(--accent-primary);">${formatKRW(amt * monthsDiff + currentBal)}</td>
+        <td class="cell-amount" style="font-weight:700; color:var(--accent-primary);">${formatKRW(itemExpected)}</td>
       `;
       detailTbody.appendChild(tr);
     });
@@ -3309,20 +3332,18 @@ function renderSavingsProjection() {
         <td class="cell-amount">${formatKRW(currentAssets)}</td>
         <td></td>
         <td class="cell-amount">${formatKRW(monthlyTotal)}</td>
-        <td class="cell-amount" style="color:var(--accent-primary);">${formatKRW(monthlyTotal * monthsDiff + currentAssets)}</td>
+        <td class="cell-amount" style="color:var(--accent-primary);">${formatKRW(totalExpectedAssets)}</td>
       `;
       detailTbody.appendChild(totalTr);
     }
   }
 
-  const currentAssets = allItems.reduce((sum, item) => sum + (Number(item.currentBalance) || 0), 0);
-  
   // Re-calculate target date here again for KPI and Chart
   const targetDateInputOut = document.getElementById('simulation-target-date');
   let targetDateStrOut = targetDateInputOut ? targetDateInputOut.value : '';
   const baseMonthStrOut = appState.currentMonth || '2026-03';
   const [baseYOut, baseMOut] = baseMonthStrOut.split('-').map(Number);
-  
+
   if (!targetDateStrOut) {
     const nextY = baseYOut + Math.floor((baseMOut + 12 - 1) / 12);
     const nextM = ((baseMOut + 12 - 1) % 12) + 1;
@@ -3332,7 +3353,7 @@ function renderSavingsProjection() {
   let monthsDiffOut = (targetYOut - baseYOut) * 12 + (targetMOut - baseMOut);
   if (monthsDiffOut < 0) monthsDiffOut = 0;
 
-  const yearlyTotalExpected = (monthlyTotal * monthsDiffOut) + currentAssets;
+  const yearlyTotalExpected = totalExpectedAssets;
   const yearlyTotalEl = document.getElementById('sim-yearly-total-assets');
   if (yearlyTotalEl) {
     yearlyTotalEl.innerText = formatKRW(yearlyTotalExpected) + ' 원';
@@ -3349,13 +3370,33 @@ function renderSavingsProjection() {
     const emergencyData = [];
     const totalData = [];
 
-    const maxChartMonths = Math.min(Math.max(monthsDiffOut, 1), 120); 
+    const maxChartMonths = Math.min(Math.max(monthsDiffOut, 1), 120);
     for (let m = 1; m <= maxChartMonths; m++) {
       labels.push(`${m}개월`);
       savingsData.push(monthlySavings * m);
       investData.push(monthlyInvest * m);
       emergencyData.push(monthlyEmergency * m);
-      totalData.push(currentAssets + (monthlyTotal * m));
+      
+      let expectedAtM = 0;
+      allItems.forEach(item => {
+        const amt = Number(item.amount) || 0;
+        const currentBal = Number(item.currentBalance) || 0;
+        let diff = m;
+        const dateText = item.currentBalanceDate || '';
+        if (dateText) {
+          const parts = dateText.split(/[-.]/);
+          if (parts.length >= 2) {
+            const itemY = parseInt(parts[0], 10);
+            const itemM = parseInt(parts[1], 10);
+            if (!isNaN(itemY) && !isNaN(itemM)) {
+               diff = (baseYOut - itemY) * 12 + (baseMOut - itemM) + m;
+               if (diff < 0) diff = 0;
+            }
+          }
+        }
+        expectedAtM += currentBal + (amt * diff);
+      });
+      totalData.push(expectedAtM);
     }
 
     projectionChartInstance = new Chart(projCtx, {
@@ -3427,7 +3468,7 @@ function renderSavingsProjection() {
           y: {
             ticks: {
               color: '#64748b',
-              callback: function(value) {
+              callback: function (value) {
                 if (value >= 10000) return Math.floor(value / 10000).toLocaleString() + '만';
                 return value.toLocaleString() + '원';
               }
@@ -3495,7 +3536,7 @@ function importBackupJSON(e) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(evt) {
+  reader.onload = function (evt) {
     try {
       const data = JSON.parse(evt.target.result);
       if (data.allocations && data.fixedExpenses) {
