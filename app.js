@@ -284,14 +284,20 @@ function normalizeState(state) {
   if (!state.incomes) state.incomes = [];
   if (!state.simulationItems) state.simulationItems = [];
   if (!state.categories.allocCategories) {
-    state.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
+    state.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사', '현금'];
+  } else if (!state.categories.allocCategories.includes('현금')) {
+    state.categories.allocCategories.push('현금');
   }
+
   if (!state.simulationCategories || state.simulationCategories.length === 0) {
     state.simulationCategories = [
-      state.categories.allocCategories[1],
-      state.categories.allocCategories[2],
-      state.categories.allocCategories[4]
+      state.categories.allocCategories[1], // 저축/적금
+      state.categories.allocCategories[2], // 투자/연금
+      state.categories.allocCategories[4]  // 비상금/경조사
     ].filter(Boolean);
+  }
+  if (!state.simulationCategories.includes('현금')) {
+    state.simulationCategories.push('현금');
   }
 
   // Split the former combined 곗돈 row into the current transfer schedule.
@@ -3035,6 +3041,15 @@ function openAddSimItemModal() {
       if (!name) return alert('항목명을 입력하세요.');
       
       if (!appState.simulationItems) appState.simulationItems = [];
+
+      // 중복 이름 검사
+      const existingInSim = appState.simulationItems.some(i => i.name === name);
+      const existingInAlloc = [...(appState.allocations.gyewon || []), ...(appState.allocations.dongwook || [])].some(i => i.name === name);
+      if (existingInSim || existingInAlloc) {
+        return alert(`이미 존재하는 항목입니다! 
+해당 자산의 잔액을 추가하시려면 우측 상단의 추가 버튼을 누르실 필요 없이, 표에서 해당 항목의 '기납입액' 칸을 직접 클릭해서 수정해 주세요. 
+만약 별개의 자산이라면 이름을 다르게(예: ${name}_2) 적어주세요.`);
+      }
       
       const rawAmt = document.getElementById('sim-item-amt').value.replace(/,/g, '');
       const rawBal = document.getElementById('sim-item-bal').value.replace(/,/g, '');
