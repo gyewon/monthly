@@ -1470,6 +1470,31 @@ function formatDayInput(val) {
   return String(val).trim().replace(/일+$/, '');
 }
 
+function formatMonthDisplay(val) {
+  if (!val || val === '-') return '-';
+  
+  const str = String(val).trim();
+  // Handle YYYYMM format
+  if (/^\d{6}$/.test(str)) {
+    return `${str.substring(0, 4)}년 ${str.substring(4, 6)}월`;
+  }
+  // Handle YYMM format
+  if (/^\d{4}$/.test(str)) {
+    let y = parseInt(str.substring(0, 2), 10);
+    if (y < 100) y += 2000;
+    return `${y}년 ${str.substring(2, 4)}월`;
+  }
+  
+  const parts = str.split(/[-.]/);
+  if (parts.length >= 2) {
+    let y = parseInt(parts[0], 10);
+    if (y < 100) y += 2000;
+    const m = parts[1].padStart(2, '0');
+    return `${y}년 ${m}월`;
+  }
+  return str;
+}
+
 // Direct Inline Cell Editor
 function editInlineCell(element, pathStr, itemId, fieldName, type = 'text') {
   if (element.querySelector('input')) return; // Already editing
@@ -3293,15 +3318,29 @@ function renderSavingsProjection() {
 
       let itemMonthsDiff = monthsDiff;
       const dateText = item.currentBalanceDate || '';
+      let displayDate = '-';
       if (dateText) {
-        const parts = dateText.split(/[-.]/);
-        if (parts.length >= 2) {
-          const itemY = parseInt(parts[0], 10);
-          const itemM = parseInt(parts[1], 10);
-          if (!isNaN(itemY) && !isNaN(itemM)) {
-            itemMonthsDiff = (targetY - itemY) * 12 + (targetM - itemM);
-            if (itemMonthsDiff < 0) itemMonthsDiff = 0;
-          }
+        displayDate = formatMonthDisplay(dateText);
+        const str = String(dateText).trim();
+        let itemY, itemM;
+        if (/^\d{6}$/.test(str)) {
+           itemY = parseInt(str.substring(0, 4), 10);
+           itemM = parseInt(str.substring(4, 6), 10);
+        } else if (/^\d{4}$/.test(str)) {
+           itemY = parseInt(str.substring(0, 2), 10);
+           itemM = parseInt(str.substring(2, 4), 10);
+        } else {
+           const parts = str.split(/[-.]/);
+           if (parts.length >= 2) {
+             itemY = parseInt(parts[0], 10);
+             itemM = parseInt(parts[1], 10);
+           }
+        }
+        
+        if (itemY !== undefined && itemM !== undefined && !isNaN(itemY) && !isNaN(itemM)) {
+          if (itemY < 100) itemY += 2000;
+          itemMonthsDiff = (targetY - itemY) * 12 + (targetM - itemM);
+          if (itemMonthsDiff < 0) itemMonthsDiff = 0;
         }
       }
 
@@ -3315,7 +3354,7 @@ function renderSavingsProjection() {
         <td style="text-align:center;"><span class="text-muted" style="font-size:0.9em; font-weight:600;">${dayText}</span></td>
         <td><span class="badge ${getAllocCategoryBadgeClass(item.catLabel)}">${item.catLabel}</span></td>
         <td class="cell-amount"><div class="editable-cell" title="클릭하여 기납입액 수정" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalance', 'number')">${formatKRW(currentBal)}</div></td>
-        <td style="text-align:center;"><div class="editable-cell text-muted" title="클릭하여 기준일자 입력 (예: 2024-05)" style="font-size: 0.85rem;" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalanceDate', 'month')">${dateText || '-'}</div></td>
+        <td style="text-align:center;"><div class="editable-cell text-muted" title="클릭하여 기준일자 입력 (예: 2024-05 또는 202405)" style="font-size: 0.85rem;" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalanceDate', 'text')">${displayDate}</div></td>
         <td class="cell-amount">${formatKRW(amt)}</td>
         <td class="cell-amount" style="font-weight:700; color:var(--accent-primary);">${formatKRW(itemExpected)}</td>
       `;
@@ -3384,14 +3423,25 @@ function renderSavingsProjection() {
         let diff = m;
         const dateText = item.currentBalanceDate || '';
         if (dateText) {
-          const parts = dateText.split(/[-.]/);
-          if (parts.length >= 2) {
-            const itemY = parseInt(parts[0], 10);
-            const itemM = parseInt(parts[1], 10);
-            if (!isNaN(itemY) && !isNaN(itemM)) {
-               diff = (baseYOut - itemY) * 12 + (baseMOut - itemM) + m;
-               if (diff < 0) diff = 0;
-            }
+          const str = String(dateText).trim();
+          let itemY, itemM;
+          if (/^\d{6}$/.test(str)) {
+             itemY = parseInt(str.substring(0, 4), 10);
+             itemM = parseInt(str.substring(4, 6), 10);
+          } else if (/^\d{4}$/.test(str)) {
+             itemY = parseInt(str.substring(0, 2), 10);
+             itemM = parseInt(str.substring(2, 4), 10);
+          } else {
+             const parts = str.split(/[-.]/);
+             if (parts.length >= 2) {
+               itemY = parseInt(parts[0], 10);
+               itemM = parseInt(parts[1], 10);
+             }
+          }
+          if (itemY !== undefined && itemM !== undefined && !isNaN(itemY) && !isNaN(itemM)) {
+             if (itemY < 100) itemY += 2000;
+             diff = (baseYOut - itemY) * 12 + (baseMOut - itemM) + m;
+             if (diff < 0) diff = 0;
           }
         }
         expectedAtM += currentBal + (amt * diff);
