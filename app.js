@@ -3461,12 +3461,16 @@ function renderSavingsProjection() {
 
       const dayText = item.day && item.day !== '-' ? item.day : '-';
       const tr = document.createElement('tr');
-      const nameHtml = item.isCustom ? `<div class="editable-cell" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'name', 'text')">${item.name}</div>` : item.name;
+      
+      const nameHtml = item.isCustom 
+        ? `<div class="editable-cell" style="display: inline-flex; margin-left: -8px;" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'name', 'text')">${item.name}</div>` 
+        : item.name;
       const amtHtml = item.isCustom ? `<div class="editable-cell" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'amount', 'number')">${formatKRW(amt)}</div>` : formatKRW(amt);
       const catHtml = item.isCustom ? `<span class="badge ${getAllocCategoryBadgeClass(item.catLabel || item.category)}">${item.catLabel || item.category}</span>` : `<span class="badge ${getAllocCategoryBadgeClass(item.catLabel || item.category)}">${item.catLabel || item.category}</span>`;
-      const delHtml = item.isCustom ? ` <i class="fa-solid fa-times text-danger" style="cursor:pointer;" onclick="deleteSimItem('${item.id}')" title="삭제"></i>` : '';
+      const delHtml = item.isCustom ? `<i class="fa-solid fa-times text-danger" style="cursor:pointer; padding: 4px;" onclick="deleteSimItem('${item.id}')" title="삭제"></i>` : '';
+      
       tr.innerHTML = `
-        <td style="display: flex; align-items: center; gap: 8px;">${nameHtml}${delHtml}</td>
+        <td><div style="display: flex; align-items: center; gap: 4px;">${nameHtml}${delHtml}</div></td>
         <td style="text-align:center;"><span class="text-muted" style="font-size:0.9em; font-weight:600;">${dayText}</span></td>
         <td>${catHtml}</td>
         <td class="cell-amount"><div class="editable-cell" title="클릭하여 기납입액 수정" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalance', 'number')">${formatKRW(currentBal)}</div></td>
