@@ -435,10 +435,15 @@ async function syncFromSupabase() {
       if (localStateStr) {
         try {
           const localState = JSON.parse(localStateStr);
-          if (localState.lastUpdated && serverState.lastUpdated && localState.lastUpdated > serverState.lastUpdated) {
-            console.log('Local state is newer than server state. Syncing local to server.');
+          const localTime = localState.lastUpdated || 0;
+          const serverTime = serverState.lastUpdated || 0;
+          
+          if (localTime >= serverTime) {
+            console.log('Local state is newer or equal to server state. Using local data.');
             appState = normalizeState(localState);
-            syncToSupabase();
+            if (localTime > serverTime) {
+              syncToSupabase();
+            }
             renderAll();
             updateSupabaseBadge(true);
             return;
