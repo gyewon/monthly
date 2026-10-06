@@ -282,6 +282,7 @@ function normalizeState(state) {
   if (!state.fixedExpenses) state.fixedExpenses = [];
   if (!state.monthlyHistory) state.monthlyHistory = [];
   if (!state.incomes) state.incomes = [];
+  if (!state.simulationItems) state.simulationItems = [];
   if (!state.categories.allocCategories) {
     state.categories.allocCategories = ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
   }
@@ -545,6 +546,11 @@ function setupEventListeners() {
     btnAllocCatManage.addEventListener('click', () => openCategoryManagerModal('alloc'));
   }
   document.getElementById('btn-add-income-modal').addEventListener('click', () => openAddIncomeModal());
+  
+  const btnAddSimItem = document.getElementById('btn-add-sim-item');
+  if (btnAddSimItem) {
+    btnAddSimItem.addEventListener('click', () => openAddSimItemModal());
+  }
 
   // Allocations Addition Triggers
   document.getElementById('btn-add-alloc-gyewon').addEventListener('click', () => openAddAllocModal('gyewon'));
@@ -2968,6 +2974,76 @@ function openAddFixedExpenseModal() {
   };
 }
 
+function openAddSimItemModal() {
+  const modal = document.getElementById('item-modal');
+  const title = document.getElementById('modal-title');
+  const body = document.getElementById('modal-body');
+
+  title.innerText = '시뮬레이션 전용 항목 추가';
+  
+  const cats = appState.categories?.allocCategories || [];
+  const catOptions = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  body.innerHTML = `
+    <div class="form-group">
+      <label>항목명</label>
+      <input type="text" id="sim-item-name" class="form-control" placeholder="예: 추가 저축액">
+    </div>
+    <div class="form-group">
+      <label>카테고리</label>
+      <select id="sim-item-cat" class="form-select">
+        ${catOptions}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>월 납입액 (원)</label>
+      <input type="text" id="sim-item-amt" class="form-control" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')">
+    </div>
+    <div class="form-group">
+      <label>기납입액 (현재 잔액) (원)</label>
+      <input type="text" id="sim-item-bal" class="form-control" placeholder="0" oninput="this.value = this.value.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')">
+    </div>
+    <div class="form-group">
+      <label>기준일</label>
+      <input type="text" id="sim-item-date" class="form-control" placeholder="예: 20261007">
+    </div>
+  `;
+
+  document.getElementById('modal-save-btn').onclick = () => {
+    const name = document.getElementById('sim-item-name').value.trim();
+    if (!name) return alert('항목명을 입력하세요.');
+    
+    if (!appState.simulationItems) appState.simulationItems = [];
+    
+    const rawAmt = document.getElementById('sim-item-amt').value.replace(/,/g, '');
+    const rawBal = document.getElementById('sim-item-bal').value.replace(/,/g, '');
+
+    appState.simulationItems.push({
+      id: 'sim_cust_' + Date.now(),
+      name: name,
+      catLabel: document.getElementById('sim-item-cat').value,
+      amount: Number(rawAmt) || 0,
+      currentBalance: Number(rawBal) || 0,
+      currentBalanceDate: document.getElementById('sim-item-date').value || '',
+      day: '-'
+    });
+    
+    saveState();
+    closeModal();
+    showToast('시뮬레이션 전용 항목이 추가되었습니다.');
+  };
+  
+  modal.classList.add('active');
+}
+
+window.deleteSimItem = function(id) {
+  if (confirm('이 시뮬레이션 전용 항목을 삭제하시겠습니까?')) {
+    appState.simulationItems = appState.simulationItems.filter(i => i.id !== id);
+    saveState();
+    showToast('삭제되었습니다.');
+  }
+};
+
 // Chart.js Rendering Engine
 function renderCharts() {
   const calcs = calculateTotals();
@@ -3246,7 +3322,8 @@ function renderSavingsProjection() {
   const calcs = calculateTotals();
   const allAllocs = [
     ...(appState.allocations?.gyewon || []).map(i => ({ ...i, pathStr: 'allocations.gyewon' })),
-    ...(appState.allocations?.dongwook || []).map(i => ({ ...i, pathStr: 'allocations.dongwook' }))
+    ...(appState.allocations?.dongwook || []).map(i => ({ ...i, pathStr: 'allocations.dongwook' })),
+    ...(appState.simulationItems || []).map(i => ({ ...i, pathStr: 'simulationItems', isCustom: true }))
   ];
 
   const allocCats = appState.categories?.allocCategories || ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
@@ -3284,7 +3361,7 @@ function renderSavingsProjection() {
 
   // Gather items by category
   const allItems = allAllocs
-    .filter(i => appState.simulationCategories.includes(i.category))
+    .filter(i => appState.simulationCategories.includes(i.category) || i.isCustom)
     .map(i => ({ ...i, catLabel: i.category }));
 
   const monthlySavings = allItems.filter(i => i.category === allocCats[1]).reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
@@ -3373,13 +3450,17 @@ function renderSavingsProjection() {
 
       const dayText = item.day && item.day !== '-' ? item.day : '-';
       const tr = document.createElement('tr');
+      const nameHtml = item.isCustom ? `<div class="editable-cell" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'name', 'text')">${item.name}</div>` : item.name;
+      const amtHtml = item.isCustom ? `<div class="editable-cell" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'amount', 'number')">${formatKRW(amt)}</div>` : formatKRW(amt);
+      const catHtml = item.isCustom ? `<div class="editable-cell" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'category', 'text')"><span class="badge ${getAllocCategoryBadgeClass(item.catLabel)}">${item.catLabel}</span></div>` : `<span class="badge ${getAllocCategoryBadgeClass(item.catLabel)}">${item.catLabel}</span>`;
+      const delHtml = item.isCustom ? ` <i class="fa-solid fa-times text-danger" style="cursor:pointer;" onclick="deleteSimItem('${item.id}')" title="삭제"></i>` : '';
       tr.innerHTML = `
-        <td>${item.name}</td>
+        <td>${nameHtml}${delHtml}</td>
         <td style="text-align:center;"><span class="text-muted" style="font-size:0.9em; font-weight:600;">${dayText}</span></td>
-        <td><span class="badge ${getAllocCategoryBadgeClass(item.catLabel)}">${item.catLabel}</span></td>
+        <td>${catHtml}</td>
         <td class="cell-amount"><div class="editable-cell" title="클릭하여 기납입액 수정" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalance', 'number')">${formatKRW(currentBal)}</div></td>
         <td style="text-align:center;"><div class="editable-cell text-muted" title="클릭하여 기준일자 입력 (예: 20240520 또는 2024.05.20)" style="font-size: 0.85rem;" onclick="editInlineCell(this, '${item.pathStr}', '${item.id}', 'currentBalanceDate', 'text')">${displayDate}</div></td>
-        <td class="cell-amount">${formatKRW(amt)}</td>
+        <td class="cell-amount">${amtHtml}</td>
         <td class="cell-amount" style="font-weight:700; color:var(--accent-primary);">${formatKRW(itemExpected)}</td>
       `;
       detailTbody.appendChild(tr);
@@ -3630,3 +3711,32 @@ function importBackupJSON(e) {
   };
   reader.readAsText(file);
 }
+
+
+window.deleteSimItem = function(id) {
+  if(confirm('이 시뮬레이션 항목을 삭제하시겠습니까?')) {
+    appState.simulationItems = (appState.simulationItems || []).filter(i => i.id !== id);
+    saveState();
+  }
+};
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#btn-add-sim-item')) {
+    if (!appState.simulationItems) appState.simulationItems = [];
+    const itemName = prompt('시뮬레이션 전용 항목명을 입력하세요 (예: 연말 보너스)');
+    if (!itemName) return;
+    const amountStr = prompt('월 평균 납입/발생 예상액을 숫자로 입력하세요 (예: 500000)');
+    if (!amountStr) return;
+    
+    appState.simulationItems.push({
+      id: Date.now().toString(),
+      name: itemName,
+      amount: parseInt(amountStr, 10) || 0,
+      category: '기타',
+      currentBalance: 0,
+      currentBalanceDate: '',
+      day: '-'
+    });
+    saveState();
+  }
+});
