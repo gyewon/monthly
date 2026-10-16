@@ -451,28 +451,17 @@ async function syncFromSupabase() {
             renderAll();
             updateSupabaseBadge(true);
             return;
-          } else {
-            // Server has newer data. Ask user before overwriting local data.
-            if (!confirm('클라우드 서버에 더 최신 데이터가 존재합니다. 서버 데이터를 불러와 현재 화면에 덮어씌우시겠습니까?\n(취소를 누르면 현재 화면의 데이터가 유지되며 서버로 전송됩니다.)')) {
-              // User chose to keep local data.
-              console.log('User rejected server data. Syncing local to server.');
-              appState = normalizeState(localState);
-              appState.lastUpdated = Date.now(); // Force local to be newer
-              syncToSupabase();
-              renderAll();
-              updateSupabaseBadge(true);
-              return;
-            }
           }
         } catch (e) { }
       }
 
-      // Proceed to overwrite with server state
+      // Server has newer data: automatically update without annoying confirm popup
+      console.log('Server state is newer. Automatically loading cloud data.');
       appState = normalizeState(serverState);
       localStorage.setItem('dongwook_gyewon_budget_app_v2', JSON.stringify(appState));
       renderAll();
       updateSupabaseBadge(true);
-      showToast('Supabase 클라우드에서 데이터를 연동했습니다!');
+      showToast('클라우드에서 최신 데이터를 연동했습니다!');
     }
   } catch (err) {
     console.error('Supabase sync error:', err);
