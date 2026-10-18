@@ -746,9 +746,53 @@ function getFixedCategoryHTML(category) {
 }
 window.getAllocCategoryBadgeClass = getCategoryBadgeClass; // For backward compatibility with any other calls
 
+// Helper to get person's payday(s) from incomes
+function getPersonPaydays(personKey) {
+  const target = personKey === 'gyewon' ? ['gyewon', '계원'] : ['dongwook', '동욱'];
+  const personIncomes = (appState.incomes || []).filter(inc => target.includes((inc.person || '').toLowerCase()));
+  if (!personIncomes.length) return '미지정';
+  
+  // Prioritize primary salary income if exists
+  const salaryInc = personIncomes.find(inc => {
+    const name = (inc.category || inc.title || '').toLowerCase();
+    return name.includes('급여') || name.includes('기본급') || name.includes('월급');
+  });
+  if (salaryInc && salaryInc.day) {
+    return formatDayDisplay(salaryInc.day);
+  }
+  
+  const days = personIncomes.map(inc => formatDayDisplay(inc.day)).filter(d => d && d !== '-');
+  return days.length ? [...new Set(days)].join(', ') : '미지정';
+}
+window.getPersonPaydays = getPersonPaydays;
+
+// Helper to open income modal to edit person's salary date/amount
+function editPayday(personKey) {
+  const target = personKey === 'gyewon' ? ['gyewon', '계원'] : ['dongwook', '동욱'];
+  const primaryInc = (appState.incomes || []).find(inc => {
+    const p = (inc.person || '').toLowerCase();
+    const name = (inc.category || inc.title || '').toLowerCase();
+    return target.includes(p) && (name.includes('급여') || name.includes('기본급') || name.includes('월급'));
+  }) || (appState.incomes || []).find(inc => target.includes((inc.person || '').toLowerCase()));
+
+  if (primaryInc) {
+    openEditIncomeModal(primaryInc.id);
+  } else {
+    showToast('수입 내역에 등록된 해당 인원의 급여 항목이 없습니다.');
+  }
+}
+window.editPayday = editPayday;
+
 // Render Allocations Tables
 function renderAllocationTables() {
   const calcs = calculateTotals();
+
+  // Update Gyewon Payday
+  const gPayday = getPersonPaydays('gyewon');
+  const gPaydayElem = document.getElementById('g-summary-payday');
+  const gHeaderPayday = document.getElementById('g-header-payday');
+  if (gPaydayElem) gPaydayElem.innerText = gPayday;
+  if (gHeaderPayday) gHeaderPayday.innerText = gPayday;
 
   // Update Gyewon Summary Bar
   const gIncElem = document.getElementById('g-summary-income');
@@ -762,6 +806,13 @@ function renderAllocationTables() {
     if (calcs.remainGyewon < 0) gRemainElem.classList.add('negative');
     else if (calcs.remainGyewon === 0) gRemainElem.classList.add('zero');
   }
+
+  // Update Dongwook Payday
+  const dPayday = getPersonPaydays('dongwook');
+  const dPaydayElem = document.getElementById('d-summary-payday');
+  const dHeaderPayday = document.getElementById('d-header-payday');
+  if (dPaydayElem) dPaydayElem.innerText = dPayday;
+  if (dHeaderPayday) dHeaderPayday.innerText = dPayday;
 
   // Update Dongwook Summary Bar
   const dIncElem = document.getElementById('d-summary-income');
@@ -1478,13 +1529,15 @@ function renderCategoryAllocationSummary() {
 function formatDayDisplay(val) {
   if (!val || val === '-') return '-';
   const s = String(val).trim();
-  if (s === '수기') return s;
+  if (s === '수기' || s.includes('월급')) return s;
   return s.replace(/일+$/, '') + '일';
 }
 
 function formatDayInput(val) {
   if (!val) return '';
-  return String(val).trim().replace(/일+$/, '');
+  const s = String(val).trim();
+  if (s === '수기' || s.includes('월급')) return s;
+  return s.replace(/일+$/, '');
 }
 
 function formatMonthDisplay(val) {
@@ -2824,6 +2877,7 @@ function openEditIncomeModal(incId) {
 function openAddAllocModal(personKey) {
   const body = document.getElementById('modal-body');
   const personName = personKey === 'gyewon' ? '계원' : '동욱';
+  const payday = getPersonPaydays(personKey);
   document.getElementById('modal-title').innerText = `${personName} 배분 항목 추가`;
 
   const allocCatList = (appState.categories && appState.categories.allocCategories) ? appState.categories.allocCategories : ['생활비', '저축/적금', '투자/연금', '대출/이자', '비상금/경조사'];
@@ -2847,8 +2901,11 @@ function openAddAllocModal(personKey) {
       <input type="text" id="modal-alloc-deposit" class="form-control" placeholder="예: 국민, 키움">
     </div>
     <div class="form-group">
-      <label>이체일자</label>
-      <input type="text" id="modal-alloc-day" class="form-control" placeholder="예: 22일, 16일">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin-bottom:0;">이체일자</label>
+        ${payday && payday !== '미지정' ? `<button type="button" class="btn btn-outline-secondary btn-sm" style="font-size:11px; padding:2px 8px;" onclick="document.getElementById('modal-alloc-day').value='${payday}'">월급일(${payday})로 입력</button>` : ''}
+      </div>
+      <input type="text" id="modal-alloc-day" class="form-control" placeholder="예: 22일, 16일, ${payday !== '미지정' ? payday : '27일'}">
     </div>
     <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
       <input type="checkbox" id="modal-alloc-isAutoTransfer" class="form-check-input" style="width:1.2rem; height:1.2rem;">

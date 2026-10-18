@@ -273,7 +273,10 @@
           <div class="card-box" id="alloc-gyewon-card">
             <div class="card-box-header">
               <div>
-                <h3><span class="badge badge-gyewon" id="alloc-gyewon-badge">계원</span> 월급 배분 내역</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span class="badge badge-gyewon" id="alloc-gyewon-badge">계원</span> 월급 배분 내역
+                  <span class="payday-chip" id="g-badge-payday" onclick="editPayday('gyewon')" title="클릭하여 월급일 수정">🗓️ 월급일: <strong id="g-header-payday">27일</strong></span>
+                </h3>
                 <p class="text-muted">항목 클릭 시 그 자리에서 셀 직접 수정 가능</p>
               </div>
               <button class="btn btn-outline-primary btn-sm" id="btn-add-alloc-gyewon">
@@ -282,6 +285,7 @@
             </div>
 
             <div class="allocation-summary-bar">
+              <div><i class="fa-solid fa-calendar-day" style="color:var(--accent-primary, #818cf8); margin-right:4px;"></i>월급일: <strong id="g-summary-payday" class="text-accent" style="cursor:pointer;" onclick="editPayday('gyewon')" title="클릭하여 월급일 수정">27일</strong></div>
               <div>총 수입: <strong id="g-summary-income">4,700,000</strong></div>
               <div>배분 합계: <strong id="g-summary-alloc">0</strong></div>
               <div>잔액: <span class="badge-balance" id="g-summary-remain">0원</span></div>
@@ -312,7 +316,10 @@
           <div class="card-box" id="alloc-dongwook-card">
             <div class="card-box-header">
               <div>
-                <h3><span class="badge badge-dongwook" id="alloc-dongwook-badge">동욱</span> 월급 배분 내역</h3>
+                <h3 style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span class="badge badge-dongwook" id="alloc-dongwook-badge">동욱</span> 월급 배분 내역
+                  <span class="payday-chip dongwook" id="d-badge-payday" onclick="editPayday('dongwook')" title="클릭하여 월급일 수정">🗓️ 월급일: <strong id="d-header-payday">16일</strong></span>
+                </h3>
                 <p class="text-muted">항목 클릭 시 그 자리에서 셀 직접 수정 가능</p>
               </div>
               <button class="btn btn-outline-primary btn-sm" id="btn-add-alloc-dongwook">
@@ -321,6 +328,7 @@
             </div>
 
             <div class="allocation-summary-bar">
+              <div><i class="fa-solid fa-calendar-day" style="color:#10b981; margin-right:4px;"></i>월급일: <strong id="d-summary-payday" class="text-accent" style="cursor:pointer;" onclick="editPayday('dongwook')" title="클릭하여 월급일 수정">16일</strong></div>
               <div>총 수입: <strong id="d-summary-income">3,750,000</strong></div>
               <div>배분 합계: <strong id="d-summary-alloc">0</strong></div>
               <div>잔액: <span class="badge-balance" id="d-summary-remain">0원</span></div>
@@ -589,6 +597,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="app.js?v=3.7"></script>
+  <script src="app.js?v=3.8"></script>
 </body>
 </html>
